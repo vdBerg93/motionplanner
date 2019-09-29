@@ -17,16 +17,18 @@ double myDot(T a, T b){
 class OBB{
     public:
         Vector2D pos;    // Center
-        double w;           // Width
-        double h;           // Height
-        double o;           // Orientation
-        vector<Vector2D> norms;     // Normal axis
-        OBB(Vector2D _pos, double _w, double _h, double _o): pos(_pos), w(_w), h(_h), o(_o){
+        float w;           // Width
+        float h;           // Height
+        float o;           // Orientation
+        
+        OBB(Vector2D _pos, float _w, float _h, float _o): pos(_pos), w(_w), h(_h), o(_o){
             setVertices();
             setNorms();
         }
-        vector<double> findMaxMin(Vector2D axis);
-        vector<Vector2D> vertices; // TL, TR, RR, RL
+        void findMaxMin(float x,float y);
+        float normsX[4], normsY[4];         // Normal axis
+        float verticesX[4], verticesY[4];   // Vertices
+        float maxMin[2];
     private:
         void setVertices();
         void setNorms();

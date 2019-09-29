@@ -37,13 +37,13 @@ void drawObstacles(ros::Publisher* ptrPub,vector<OBB> obstacleVector){
         msg.lifetime = ros::Duration();
         
         geometry_msgs::Point p;// int i = 0;
-        p.x = obstacleVector[index].vertices.back().x;
-        p.y = obstacleVector[index].vertices.back().y;
+        p.x = obstacleVector[index].verticesX[3];
+        p.y = obstacleVector[index].verticesY[3];
         p.z = 0;
         msg.points.push_back(p);
-        for(int i = 0; i<obstacleVector[index].vertices.size(); i++){
-            p.x = obstacleVector[index].vertices[i].x;
-            p.y = obstacleVector[index].vertices[i].y;
+        for(int i = 0; i<=3; i++){
+            p.x = obstacleVector[index].verticesX[i];
+            p.y = obstacleVector[index].verticesY[i];
             p.z = 0;
             msg.points.push_back(p);
             msg.points.push_back(p);
@@ -80,36 +80,35 @@ bool checkCollision(ros::Publisher* ptrPub,StateArray T){
     return false;
 }
 
-
-
 void OBB::setVertices(){
-    vertices.push_back(Vector2D(pos.x+cos(o)*(h/2)-sin(o)*(w/2),pos.y+sin(o)*(h/2)+cos(o)*(w/2)));      // FL
-    vertices.push_back(Vector2D(pos.x+cos(o)*(h/2)-sin(o)*(-w/2),pos.y+sin(o)*(h/2)+cos(o)*(-w/2)));    // FR
-    vertices.push_back(Vector2D(pos.x+cos(o)*(-h/2)-sin(o)*(-w/2),pos.y+sin(o)*(-h/2)+cos(o)*(-w/2)));  // RR
-    vertices.push_back(Vector2D(pos.x+cos(o)*(-h/2)-sin(o)*(w/2),pos.y+sin(o)*(-h/2)+cos(o)*(w/2)));    // RL
-    assert(vertices.size()==4);
+    verticesX[0] = pos.x+cos(o)*(h/2)-sin(o)*(w/2);             // FL
+    verticesY[0] = pos.y+sin(o)*(h/2)+cos(o)*(w/2);           // FL
+    verticesX[1] = pos.x+cos(o)*(h/2)-sin(o)*(-w/2);            // FR
+    verticesY[1] = pos.y+sin(o)*(h/2)+cos(o)*(-w/2);          // FR
+    verticesX[2] = pos.x+cos(o)*(-h/2)-sin(o)*(-w/2);           // RR
+    verticesY[2] = pos.y+sin(o)*(-h/2)+cos(o)*(-w/2);         // RR
+    verticesX[3] = pos.x+cos(o)*(-h/2)-sin(o)*(w/2);            // RL
+    verticesY[3] = pos.y+sin(o)*(-h/2)+cos(o)*(w/2);          // RL
 }
 
 void OBB::setNorms(){
     int i = 0;
-    while (i<(vertices.size()-1)){
-        norms.push_back(Vector2D(vertices[i+1].y-vertices[i].y,-(vertices[i+1].x-vertices[i].x)));
+    while (i<3){
+        normsX[i] = verticesY[i+1]-verticesY[i];
+        normsY[i] = -(verticesX[i+1]-verticesX[i]);
         i++;
     }
-    norms.push_back(Vector2D(vertices[0].y-vertices[i].y,-(vertices[0].x-vertices[i].x)));
-    assert(norms.size()==vertices.size());
+    normsX[3] = verticesY[0]-verticesY[3];
+    normsX[3] = -(verticesX[0]-verticesX[3]);
 }
 
-vector<double> OBB::findMaxMin(Vector2D axis){
-    //cout<<"start max min calculation..."<<endl;
-    vector<double> maxMin; // [0] is max, [1] is cosmin
+void OBB::findMaxMin(float x, float y){
     // First vertice as baseline
-    maxMin.push_back(myDot(vertices[0], axis));
-    maxMin.push_back(maxMin[0]);
-    //maxMin[1] = maxMin[0];
+    maxMin[0] = verticesX[0]*x + verticesY[0]*y;    // Initial maximum
+    maxMin[1] = maxMin[0];                                      // Initial minimum
     // Iterate through the remaining
-    for(int i = 1; i < vertices.size(); i++){
-        double proj = myDot(vertices[i], axis);
+    for(int i = 1; i <= 3; i++){
+        float proj = verticesX[i]*x + verticesY[i]*y;
         // if new maximum
         if (proj > maxMin[0]){
             maxMin[0] = proj;
@@ -119,7 +118,7 @@ vector<double> OBB::findMaxMin(Vector2D axis){
             maxMin[1] = proj;
         }
     }
-    return maxMin;
+    return;
 }
 
 // Collison checking two rectangles OBB using the Separating Axis Theorem
@@ -136,22 +135,27 @@ bool intersects(OBB a, OBB b){
         return false;
     }
     // SAT
-   // Combine vectors not real function
-    vector<Vector2D> axes = a.norms;
-    for(int i = 0; i<b.norms.size(); i++){
-        axes.push_back(b.norms[i]);
-    }
-    for(int i =0; i < axes.size(); i++){
-        Vector2D axis = axes[i];
-        vector<double> aProj = a.findMaxMin(axis);
-
-        vector<double> bProj = b.findMaxMin(axis);
-
+    // Check for first OBB
+    float axis[2];
+    for(int i =0; i <= 3; i++){
+        a.findMaxMin(a.normsX[i],a.normsY[i]);
+        float aProj[2] {a.maxMin[0],a.maxMin[1]};
+        b.findMaxMin(a.normsX[i],a.normsY[i]);
+        float bProj[2] {b.maxMin[0],b.maxMin[1]};
         // Check is separating axis condition is true
         if(aProj[0] < bProj[1] || bProj[0] < aProj[1]){
             return false;
         }
-
+    }
+   for(int i =0; i <= 3; i++){
+        a.findMaxMin(b.normsX[i],b.normsY[i]);
+        float aProj[2] {a.maxMin[0],a.maxMin[1]};
+        b.findMaxMin(b.normsX[i],b.normsY[i]);
+        float bProj[2] {b.maxMin[0],b.maxMin[1]};
+        // Check is separating axis condition is true
+        if(aProj[0] < bProj[1] || bProj[0] < aProj[1]){
+            return false;
+        }
     }
     return true;
 }

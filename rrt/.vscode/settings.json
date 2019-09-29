@@ -7,6 +7,7 @@
     "files.associations": {
         "array": "cpp",
         "cmath": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "vector": "cpp"
     }
 }

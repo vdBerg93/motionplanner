@@ -9,7 +9,7 @@ void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simu
 
 vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose){
 	MyRRT RRT(startState, goalPose);	// Initialize tree with first node
-	Timer timer(200); 				// Initialize timer class with time in ms
+	Timer timer(1000); 				// Initialize timer class with time in ms
 	
 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
 	for(int iter = 0; timer.Get(); iter++){
