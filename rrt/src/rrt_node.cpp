@@ -1,0 +1,133 @@
+// Global vars for debugging and plotting
+bool draw_tree = 0;
+bool draw_obs = 0;
+bool draw_final_path = 0;
+bool debug_mode = 0;
+bool debug_reference = 0;
+bool draw_states = 0;
+
+// Include STDLIB headers
+#include <ros/ros.h>
+#include <iostream>
+#include <vector>
+#include <array>
+#include <cstdlib>
+#include <cmath>
+#include <ctime>
+#include <geometry_msgs/Point.h>
+#include <visualization_msgs/Marker.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/MultiArrayDimension.h>
+//#include <trajectory_msgs/JointTrajectoryPoint.h>
+#include <vision_msgs/Detection2DArray.h>
+
+// Global constants
+const double inf = std::numeric_limits<double>::infinity();
+const double pi = M_PI;
+
+// Global variables
+double sim_dt, vmax, vgoal, ref_res, ctrl_dla;
+
+
+ros::Publisher* ptrPub;
+ros::ServiceClient* ptrSrv;
+
+#include "functions.cpp"
+// Include header files
+#include "rrt/vehicle.h"
+//#include "rrt/reference.h"
+#include "rrt/rrtplanner.h"
+#include "rrt/simulation.h"
+#include "rrt/collision.h"
+#include "rrt/controller.h"
+#include "rrt/datatypes.h"
+#include "rrt/planmotion.h"
+#include "rrt/Reference.h"
+// Include classes
+#include "reference.cpp"
+#include "rrtplanner.cpp"
+#include "controller.cpp"
+#include "simulation.cpp"
+#include "collisioncheck.cpp"
+#include "testers.cpp"
+
+
+/* #############################
+	CRITICAL TODO'S
+##############################*/
+// 1. Check cost function and node sorting heuristics
+
+vector<double> getReqState(rrt::planmotion::Request req){
+	vector<double> state;
+	for(int i =0; i!=5; i++){
+		state.push_back(req.state[i]);
+	}
+	return state;
+}
+vector<double> getReqGoal(rrt::planmotion::Request req){
+	vector<double> goal;
+	for(int i=0; i!=3; i++){
+		goal.push_back(req.goal[i]);
+	}
+	return goal;
+}
+
+bool planMotion(rrt::planmotion::Request &req, rrt::planmotion::Response &resp){
+	cout<<"----------------------------------"<<endl;
+	cout<<"Received request, processing..."<<endl;
+	Vehicle veh; veh.setTalos();
+	updateLookahead(req.state[3]);
+	updateReferenceResolution(req.state[3]);
+	vmax = req.vmax;	sim_dt = 0.1; 	vgoal = req.goal[3];
+	// Extract state and goal from msg
+	vector<double> state = getReqState(req);
+	vector<double> goal = getReqGoal(req);
+	// Build the tree
+	vector<Node> tree = buildTree(veh, ptrPub,state,goal);
+	vector<Node> bestPath = extractBestPath(tree,1);
+	// Prepare message
+	for(vector<Node>::iterator it = bestPath.begin(); it!=bestPath.end(); ++it){
+		rrt::Reference ref; 	rrt::Trajectory tra;
+		ref.dir = it->ref.dir;
+		ref.x = it->ref.x;
+		ref.y = it-> ref.y;
+		ref.v = it->ref.v;
+		resp.ref.push_back(ref);
+		for(vector<vector<double>>::iterator it2 = it->tra.begin(); it2!=it->tra.end(); ++it2){
+			tra.x.push_back( (*it2)[0]);
+			tra.y.push_back( (*it2)[1]);
+			tra.th.push_back( (*it2)[2]);
+			tra.d.push_back( (*it2)[3]);
+			tra.v.push_back( (*it2)[4]);
+		}
+		resp.tra.push_back(tra);
+	}
+	assert(resp.ref.size()==bestPath.size());
+	cout<<"Replying to request..."<<endl;
+	cout<<"----------------------------------"<<endl;
+	return true;
+}
+
+int main( int argc, char** argv ){	
+	std::cout.precision(2);
+
+	// Initialize ros node handle
+	ros::init(argc, argv, "rrt_node");
+	ros::NodeHandle nh; ros::Rate rate(2);
+
+	// Subscribe to detection service
+	//ros::ServiceClient client = nh.serviceClient<vision_msgs::Detection2DArray>("getdetections");
+	//ptrSrv = &client;	// Initialize global pointer to client
+
+	// Create marker publisher for Rviz
+	ros::Publisher marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker",10);
+	ptrPub = &marker_pub; 	// Initialize global pointer to marker publisher
+
+	// Register service with the master
+	ros::ServiceServer server = nh.advertiseService("planmotion", &planMotion);
+
+	while(ros::ok()){
+		ros::spin();
+	}
+}
+

@@ -1,0 +1,7 @@
+float64[] state
+float64[] goal
+float64 vmax
+bool bend
+---
+rrt/Reference[] ref
+rrt/Trajectory[] tra
