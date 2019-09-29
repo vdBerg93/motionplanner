@@ -26,11 +26,11 @@ vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> star
 
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub){;
-	vector<double> sampleBounds {0,50,-25,25};
+	vector<double> sampleBounds {0,50,-1.75,5.25};
 	//vector<double> sampleBounds {0,49,-1.75,4.75};
-	//geometry_msgs::Point sample = sampleAroundVehicle(sampleBounds); 
+	geometry_msgs::Point sample = sampleAroundVehicle(sampleBounds); 
 	vector<double> lanes {0,3.5}; double Lmax = 50;
-	geometry_msgs::Point sample = sampleOnLane(lanes, Lmax);
+	//geometry_msgs::Point sample = sampleOnLane(lanes, Lmax);
 	
 	signed int dir = 1; 		// Driving direction variable
 	

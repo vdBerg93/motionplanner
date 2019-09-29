@@ -31,8 +31,8 @@ class Controller{
 
 double getLateralError(const MyReference &ref, const state_type &x, const int& IDwp,const geometry_msgs::Point& Ppreview);
 int findClosestPoint(const MyReference& ref, const geometry_msgs::Point& point, int ID);
-vector<point2D> transformToVehicle(vector<point2D> ref,vector<double> x);
-double interpolate(vector<point2D> tref);
+void transformToVehicle(double (&xval)[3],double (&yval)[3],double (&Txval)[3],double (&Tyval)[3],const double (&x)[3]);
+double interpolate(const double (&Txval)[3], const double (&Tyval)[3]);
 void updateLookahead(double v);
 
 void updateReferenceResolution(double v);

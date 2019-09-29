@@ -34,7 +34,7 @@ Simulation::Simulation(const MyRRT& RRT, Node& node, MyReference& ref, Vehicle& 
 void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReference& ref, const Vehicle& veh){
 	double kappa;
 	// int w1 = 160; int w2 = 80; int wc = 2;
-	int w1 = 160; int w2 = 80; int wc = 5;
+	int w1 = 160; int w2 = 80; int wc = 2;
 	state_type x(7), dx(7);
 
 	for(int i = 0; i<(20/sim_dt); i++){

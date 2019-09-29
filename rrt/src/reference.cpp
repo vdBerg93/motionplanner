@@ -114,19 +114,25 @@ void generateVelocityProfile(	MyReference& ref, const Node& node, const int& IDw
 	//Linear interpolation
 	//****************************************/
 	vector<double> vec_acc, vec_brake, vec_coast;
-
 	if (D_Vc_accel!=0){
 		vec_acc = LinearSpacedVector(v0,Vcoast,ceil(D_Vc_accel/res)+1);
 	}
 	if(D_Vc_brake!=0){
 		vec_brake = LinearSpacedVector(Vcoast,vend,floor(D_Vc_brake/res)+1);
 	}
-
 	if(D_Vc_coast!=0){
 		while(vec_coast.size()!=(Np-vec_acc.size()-vec_brake.size()))
 		{  	vec_coast.push_back(Vcoast);	}
 	}
 
+	ref.v.insert(ref.v.end(),vec_acc.begin(),vec_acc.end());
+	ref.v.insert(ref.v.end(),vec_coast.begin(),vec_coast.end());
+	ref.v.insert(ref.v.end(),vec_brake.begin(),vec_brake.end());
+	// Append front with initial velocity
+	while( ref.v.size()<ref.x.size()){
+		ref.v.insert(ref.v.begin(), v0);
+	}
+	assert(ref.v.size()==ref.x.size());
 	// FOR DEBUGGING ONLY
 	// MaxAccel = 1.5*Vcoast/(1.5*Daccel-1.5*c1*Daccel);
 	// MaxDecel = 1.5*-Vcoast/(1.5*Daccel-1.5*c1*Daccel);
@@ -135,25 +141,25 @@ void generateVelocityProfile(	MyReference& ref, const Node& node, const int& IDw
 	// while (((vec_acc.size() + vec_coast.size()+vec_brake.size()) > Np)&&(!vec_coast.empty)){
 	// 	vec_coast.pop_back();
 	// }
-	while( ref.v.size()!=ref.x.size()){
-		if(ref.v.size()<Np){
-			// Append untill brake vector is empty
-			if (!vec_brake.empty()){
-				ref.v.push_back(vec_brake.front());		vec_brake.erase(vec_brake.begin()); continue;
-			// Append untill coast vector is empty
-			}else if (!vec_coast.empty()){
-				ref.v.insert(ref.v.begin(), vec_coast.back()); vec_coast.pop_back(); continue;
-			// Append until accelerate vector is empty
-			}else if (!vec_acc.empty()){
-				ref.v.insert(ref.v.begin(), vec_acc.back()); vec_acc.pop_back(); continue;
-			// Append the rest with v0 (not used)s
-			}else{
-				ref.v.insert(ref.v.begin(), v0); vec_acc.pop_back(); continue;
-			}	
-		}else{
-			ref.v.insert(ref.v.begin(), v0);
-		}
-	}
+	// while( ref.v.size()!=ref.x.size()){
+	// 	if(ref.v.size()<Np){
+	// 		// Append untill brake vector is empty
+	// 		if (!vec_brake.empty()){
+	// 			ref.v.push_back(vec_brake.front());		vec_brake.erase(vec_brake.begin()); continue;
+	// 		// Append untill coast vector is empty
+	// 		}else if (!vec_coast.empty()){
+	// 			ref.v.insert(ref.v.begin(), vec_coast.back()); vec_coast.pop_back(); continue;
+	// 		// Append until accelerate vector is empty
+	// 		}else if (!vec_acc.empty()){
+	// 			ref.v.insert(ref.v.begin(), vec_acc.back()); vec_acc.pop_back(); continue;
+	// 		// Append the rest with v0 (not used)s
+	// 		}else{
+	// 			ref.v.insert(ref.v.begin(), v0); vec_acc.pop_back(); continue;
+	// 		}	
+	// 	}else{
+	// 		ref.v.insert(ref.v.begin(), v0);
+	// 	}
+	// }
 	if(debug_reference)
 	{
 		cout<<"IDwp="<<IDwp<<",\t Daccel="<<D_Vc_accel<<"\tDcoast="<<D_Vc_coast<<"\tDbrake="<<D_Vc_brake<<"\t Lp="<<Lp<<endl;
