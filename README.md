@@ -1,6 +1,10 @@
 # ROS Motion Planner Package
 
 This package contains node for implementing the motion planner in a mobile robot.
+Package contains the following nodes:
+* pcl_converter: convert pointcloud into 2D Oriented Bounding Boxes
+* rrt: Generate a motion plan using RRT with closed-loop prediction
+* controls: Make the mobile robot follow the planned motion
 
 ## Getting Started
 
