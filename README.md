@@ -47,7 +47,7 @@ Add additional notes about how to deploy this on a live system
 
 ## Authors
 
-* **Berend van den Berg** - *Initial work* - [PurpleBooth](https://github.com/vdBerg93)
+* **Berend van den Berg** - *Initial work* - [vdBerg93](https://github.com/vdBerg93)
 
 ## Acknowledgments
 
