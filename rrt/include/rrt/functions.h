@@ -1,4 +1,11 @@
+#ifndef functions_h
+#define functions_h
+
 #include <numeric>
+
+const double inf = std::numeric_limits<double>::infinity();
+const double pi = M_PI;
+
 using namespace std;
 // Linear interpolation following MATLAB linspace
 vector<double> LinearSpacedVector(double a, double b, std::size_t N)
@@ -54,3 +61,5 @@ double angleDiff(double a,double b){
 double checkSaturation(double min, double max, double val){
     return std::max(std::min(val,max),min);
 }
+
+#endif

@@ -7,6 +7,28 @@ using namespace std;
 
 void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simulation sim);
 
+MyRRT::MyRRT(vector<double> state, vector<double> _goalPose){
+	goalReached = 0;
+	sortLimit = 10;
+	direction = 1;
+    goalPose = _goalPose;
+    // Generate initial reference
+	MyReference ref; 
+    double xend = state[0]+cos(state[2])*ctrl_dla;
+    double yend = state[1]+sin(state[2])*ctrl_dla;
+    int N = floor( sqrt( pow(state[0]-xend,2) + pow(state[1]-yend,2) )/ref_res);
+    ref.x = LinearSpacedVector(state[0],xend,N);
+    ref.y = LinearSpacedVector(state[0],yend,N);
+    for(int i = 0; i!=N; i++){
+        ref.v.push_back(state[4]);
+    }
+    ref.dir = 1;
+    // Initialize tree
+    vector<state_type> T; T.push_back(state);
+    Node initialNode(state,-1,ref,T,0,0,0);
+	tree.push_back(initialNode);
+}
+
 vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose){
 	MyRRT RRT(startState, goalPose);	// Initialize tree with first node
 	Timer timer(1000); 				// Initialize timer class with time in ms

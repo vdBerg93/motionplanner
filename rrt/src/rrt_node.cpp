@@ -18,31 +18,27 @@ bool draw_states = 0;
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
-//#include <trajectory_msgs/JointTrajectoryPoint.h>
 #include <vision_msgs/Detection2DArray.h>
-
-// Global constants
-const double inf = std::numeric_limits<double>::infinity();
-const double pi = M_PI;
 
 // Global variables
 double sim_dt, vmax, vgoal, ref_res, ctrl_dla;
 
-
 ros::Publisher* ptrPub;
 ros::ServiceClient* ptrSrv;
 
-#include "functions.cpp"
 // Include header files
+#include "rrt/functions.h"
 #include "rrt/vehicle.h"
-//#include "rrt/reference.h"
 #include "rrt/rrtplanner.h"
 #include "rrt/simulation.h"
 #include "rrt/collision.h"
 #include "rrt/controller.h"
 #include "rrt/datatypes.h"
-#include "rrt/planmotion.h"
-#include "rrt/Reference.h"
+#include "car_msgs/Reference.h"
+#include "car_msgs/State.h"
+#include "car_msgs/planmotion.h"
+#include "car_msgs/Trajectory.h"
+ 
 // Include classes
 #include "reference.cpp"
 #include "rrtplanner.cpp"
@@ -57,14 +53,14 @@ ros::ServiceClient* ptrSrv;
 ##############################*/
 // 1. Check cost function and node sorting heuristics
 
-vector<double> getReqState(rrt::planmotion::Request req){
+vector<double> getReqState(car_msgs::planmotion::Request req){
 	vector<double> state;
 	for(int i =0; i!=5; i++){
 		state.push_back(req.state[i]);
 	}
 	return state;
 }
-vector<double> getReqGoal(rrt::planmotion::Request req){
+vector<double> getReqGoal(car_msgs::planmotion::Request req){
 	vector<double> goal;
 	for(int i=0; i!=3; i++){
 		goal.push_back(req.goal[i]);
@@ -72,7 +68,7 @@ vector<double> getReqGoal(rrt::planmotion::Request req){
 	return goal;
 }
 
-bool planMotion(rrt::planmotion::Request &req, rrt::planmotion::Response &resp){
+bool planMotion(car_msgs::planmotion::Request &req, car_msgs::planmotion::Response &resp){
 	cout<<"----------------------------------"<<endl;
 	cout<<"Received request, processing..."<<endl;
 	Vehicle veh; veh.setTalos();
@@ -87,7 +83,7 @@ bool planMotion(rrt::planmotion::Request &req, rrt::planmotion::Response &resp){
 	vector<Node> bestPath = extractBestPath(tree,1);
 	// Prepare message
 	for(vector<Node>::iterator it = bestPath.begin(); it!=bestPath.end(); ++it){
-		rrt::Reference ref; 	rrt::Trajectory tra;
+		car_msgs::Reference ref; 	car_msgs::Trajectory tra;
 		ref.dir = it->ref.dir;
 		ref.x = it->ref.x;
 		ref.y = it-> ref.y;
@@ -110,7 +106,7 @@ bool planMotion(rrt::planmotion::Request &req, rrt::planmotion::Response &resp){
 
 int main( int argc, char** argv ){	
 	std::cout.precision(2);
-
+	
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
 	ros::NodeHandle nh; ros::Rate rate(2);

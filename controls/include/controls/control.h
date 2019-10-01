@@ -1,7 +1,8 @@
 #ifndef CTRL_H
 #define CTRL_H
 
-#include "rrt/datatypes.h"
+// #include "rrt/datatypes.h"
+using namespace std;
 
 struct ControlCommand{
     double dc, ac;
