@@ -1,3 +1,6 @@
+// Global variables
+using namespace std;
+
 // Include STDLIB headers
 #include <ros/ros.h>
 #include <iostream>
@@ -5,37 +8,42 @@
 #include <array>
 #include <cstdlib>
 #include <cmath>
+// Message headers
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 
-using namespace std;
-double ctrl_dla, tla, ref_res;
-
+// Headers from RRT package
 #include <rrt/functions.h>
 #include <rrt/datatypes.h>
 #include <rrt/rrtplanner.h>
 #include <rrt/vehicle.h>
-
-//#include "control.cpp"
+// Control headers
+#include "controls/datatypes.h"
+#include "controls/msgmanager.h"
+#include "controls/controller.h"
+#include "controller.cpp"
 
 int main( int argc, char** argv ){	
-	// std::cout.precision(2);
-	// // MyReference ref;
-	// MyReference ref;
-	// // Initialize ros node handle
-	// ros::init(argc, argv, "controls_node");
-	// ros::NodeHandle nh; ros::Rate rate(2);
-
-	// // Register localization subsriber
-	// // ros::Subscriber subPos = nh.subscribe();
-
-	// // Register motion speficication subsriber
-	// // ros::Subscriber subPos = nh.subscribe();
+	// Initialize node
+	ros::init(argc, argv, "controls_node");
 	
-	// // Register controls publisher
-	// // ros::Publisher pubCtrl = nh.advertise<...>("controls",10);
+	// Intialize object for node communication
+	MsgManager msgManager;
+	ros::Rate rate(25);
 
-	// while(ros::ok()){
-	// 	ros::spin();
-	// }
+	// Initialize controller
+	Controller ctrl;
+
+	while(ros::ok()){
+		if (msgManager.queueNotEmpty()){
+			ctrl.setReference(msgManager.getFirstPlan());
+			while(!ctrl.endreached){
+				ctrl.getControls(msgManager.getState());
+				ros::spinOnce();
+			}
+			msgManager.popFirstPlan();
+		}else{
+			ros::spinOnce();
+		}
+	}
 }

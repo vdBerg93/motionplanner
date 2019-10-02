@@ -17,6 +17,7 @@ class Vehicle{
         double b;       // COG positition w.r.t. rear axle
         double Vch;     // Characterisic velocity
         double rho;     // Minimum turning radius
+        double Kus;     // Understeer gradient
 
         void setTalos(){
             dmax = 0.5435;          // From article      
@@ -32,6 +33,7 @@ class Vehicle{
             b = 1.8;                // Wild guess
             Vch = 20;               // From article
             rho = 4.77;             // From article
+            Kus = 0.018;            // Manually tuned
         };
 };
 

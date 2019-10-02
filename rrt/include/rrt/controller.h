@@ -14,9 +14,11 @@ class Controller{
         int IDwp; 
         geometry_msgs::Point Ppreview;
         // Lateral control
-        double tla, dla_min, dla_vmin, dla_c, ym;
+        // double tla, dla_min, dla_vmin;
+        double ym;
         // Longitudinal control
-        double Kp, Ki, E, iE;
+        // double Kp, Ki, E, iE;
+        double E, iE;
         // Globals
         bool endreached;
 

@@ -21,7 +21,9 @@ bool draw_states = 0;
 #include <vision_msgs/Detection2DArray.h>
 
 // Global variables
-double sim_dt, vmax, vgoal, ref_res, ctrl_dla;
+double sim_dt;
+double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
+double ref_res, ref_int, ref_mindist, vmax, vgoal;
 
 ros::Publisher* ptrPub;
 ros::ServiceClient* ptrSrv;
@@ -110,6 +112,16 @@ int main( int argc, char** argv ){
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
 	ros::NodeHandle nh; ros::Rate rate(2);
+
+	// Get parameters from server
+	ros::param::get("ctrl/tla",ctrl_tla);
+	ros::param::get("ctrl/mindla",ctrl_mindla);
+	ros::param::get("ctrl/dlavmin",ctrl_dlavmin);
+	ros::param::get("ctrl/refint",ref_int);
+	ros::param::get("ctrl/refmindist",ref_mindist);
+	ros::param::get("ctrl/sampleTime",sim_dt);
+	ros::param::get("ctrl/Kp",ctrl_Kp);
+	ros::param::get("ctrl/Ki",ctrl_Ki);
 
 	// Subscribe to detection service
 	//ros::ServiceClient client = nh.serviceClient<vision_msgs::Detection2DArray>("getdetections");

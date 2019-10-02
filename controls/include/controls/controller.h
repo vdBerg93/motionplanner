@@ -1,7 +1,9 @@
 #ifndef CTRL_H
 #define CTRL_H
 
-// #include "rrt/datatypes.h"
+#include "rrt/rrtplanner.h"
+#include "rrt/vehicle.h"
+
 using namespace std;
 
 struct ControlCommand{
@@ -14,28 +16,35 @@ class Controller{
         // Waypoint
         int IDwp; 
         geometry_msgs::Point Ppreview;
-        // Lateral control
-        double tla, dla_min, dla_vmin, dla_c, ym;
-        // Longitudinal control
-        double Kp, Ki, E, iE;
+        // Control constants
+        double dla_min, dla_vmin; 
+        double Kp, Ki;
+        int LAlong;
+        // Control variables
+        double tla, dla, ym;
+        double E, iE;
+        // Reference
+        MyReference ref;
+        int refIDend;
+        // Vehicle parameters
+        Vehicle veh;
         // Globals
         bool endreached;
+        double Ts;
 
-        Controller(const MyReference& ref, const state_type& x);
-        ControlCommand getControls(const MyReference& ref, const Vehicle& veh, const state_type& x);
+        Controller();
+        void setReference(const MyReference& ref);
+        ControlCommand getControls(const state_type& x);
     private:
-        double getAccelerationCommand(const Vehicle& veh, const MyReference& ref, const state_type& x);
-        double getSteerCommand(const MyReference& ref, const state_type& x, const Vehicle& veh);
-        void updateWaypoint(const MyReference& ref, const state_type& x);
+        void updateLookahead(double v);
+        void updateWaypoint(const state_type& x);
+        double getAccelerationCommand(const state_type& x);
+        double getSteerCommand(const state_type& x);
 };
-
 
 double getLateralError(const MyReference &ref, const state_type &x, const int& IDwp,const geometry_msgs::Point& Ppreview);
 int findClosestPoint(const MyReference& ref, const geometry_msgs::Point& point, int ID);
 void transformToVehicle(double (&xval)[3],double (&yval)[3],double (&Txval)[3],double (&Tyval)[3],const double (&x)[3]);
 double interpolate(const double (&Txval)[3], const double (&Tyval)[3]);
-void updateLookahead(double v);
-
-void updateReferenceResolution(double v);
 
 #endif

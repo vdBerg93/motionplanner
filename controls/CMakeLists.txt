@@ -4,16 +4,21 @@ project(controls)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
+set(msg_dependencies
+  car_msgs
+  geometry_msgs
+  gazebo_msgs
+  std_msgs
+)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rrt
-  car_msgs
-  geometry_msgs
   roscpp
   rospy
-  std_msgs
+  ${msg_dependencies}
 )
 
 
@@ -120,7 +125,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include/${PROJECT_NAME}
+  include
   ${rrt_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
@@ -151,9 +156,9 @@ add_executable(${PROJECT_NAME}_node src/controls_node.cpp)
 #add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-#target_link_libraries(${PROJECT_NAME}_node
-#  ${catkin_LIBRARIES}
-#)
+target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##

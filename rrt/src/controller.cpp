@@ -11,9 +11,8 @@
 // CONTROLLER CLASS FUNCTIONS 
 //*******************************
 void updateLookahead(double v){
-	double tla{1.5}, dla_min{3.2}, dla_vmin{3};
-	double dla_c = dla_min - tla*dla_vmin; 
-	ctrl_dla = std::max(dla_min,dla_c+tla*std::abs(v));
+	double dla_c = ctrl_mindla - ctrl_tla*ctrl_dlavmin; 
+	ctrl_dla = std::max(ctrl_mindla,dla_c+ctrl_tla*std::abs(v));
 }
 
 void updateReferenceResolution(double v){
@@ -24,7 +23,7 @@ void updateReferenceResolution(double v){
 Controller::Controller(const MyReference& ref, const state_type& x){
     updateLookahead(x[4]);      // Update the lookahead distance (velocity dependent)
     IDwp = 0; endreached = 0;   // Controller initialization
-    Kp = 2; Ki = 0.05; iE = 0;  // Longitudinal control configuration
+    iE = 0;  // Longitudinal control configuration
     updateWaypoint(ref,x);      // Initialize the first waypoint
 }
 
@@ -42,14 +41,13 @@ double Controller::getAccelerationCommand(const Vehicle& veh, const MyReference&
     iE = iE + E*sim_dt;                     // Integral error
 
     // Calculate acceleration command and constrain it
-    double aCmd = checkSaturation(veh.amin,veh.amax,Kp*E+Ki*iE);
+    double aCmd = checkSaturation(veh.amin,veh.amax,ctrl_Kp*E+ctrl_Ki*iE);
     return aCmd;
 };
 
 double Controller::getSteerCommand(const MyReference& ref, const state_type& x, const Vehicle& veh){
     ym = getLateralError(ref,x,IDwp,Ppreview);                      // Get the lateral error at preview point, perpendicular to vehicle 
-    double Kus = 0.018;                                             // Understeer gradient
-    double cmdDelta = 2*((veh.L+Kus*x[4]*x[4])/pow(ctrl_dla,2))*ym; // Single preview point control (Schmeitz, 2017, "Towards a Generic Lateral Control Concept ...")
+    double cmdDelta = 2*((veh.L+veh.Kus*x[4]*x[4])/pow(ctrl_dla,2))*ym; // Single preview point control (Schmeitz, 2017, "Towards a Generic Lateral Control Concept ...")
     return checkSaturation(-veh.dmax,veh.dmax,cmdDelta);;           // Constrain with actuator saturation limits
 };
 

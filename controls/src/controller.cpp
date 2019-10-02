@@ -5,65 +5,68 @@
 #include "rrt/vehicle.h"
 #include "rrt/datatypes.h"
 #include <boost/range/irange.hpp>
+#include "controls/controller.h"
 
 
 //*******************************
 // CONTROLLER CLASS FUNCTIONS 
 //*******************************
-void updateLookahead(double v){
-	double tla{1.5}, dla_min{3.2}, dla_vmin{3};
-	double dla_c = dla_min - tla*dla_vmin; 
-	ctrl_dla = std::max(dla_min,dla_c+tla*std::abs(v));
+Controller::Controller(){
+    ros::param::get("ctrl/tla",tla);
+    ros::param::get("ctrl/mindla",dla_min);
+    ros::param::get("ctrl/dlavmin",dla_vmin);
+    ros::param::get("ctrl/sampleTime",Ts);
+    ros::param::get("ctrl/Ki",Ki);
+    ros::param::get("ctrl/Kp",Kp);
+    LAlong = 2;    iE = 0;
+    IDwp = 0; endreached = 0;
+    veh.setTalos();
 }
 
-void updateReferenceResolution(double v){
-    double ref_int{0.2}, ref_mindist{0.2};
-    ref_res = std::max(abs(v)*ref_int,ref_mindist);
+void Controller::setReference(const MyReference& _ref){
+    IDwp = 0; endreached = 0; iE = 0;
+    ref = _ref;
+    refIDend = ref.v.size()-1;             // Index of last reference element
 }
 
-Controller::Controller(const MyReference& ref, const state_type& x){
-    updateLookahead(x[4]);      // Update the lookahead distance (velocity dependent)
-    IDwp = 0; endreached = 0;   // Controller initialization
-    Kp = 2; Ki = 0.05; iE = 0;  // Longitudinal control configuration
-    updateWaypoint(ref,x);      // Initialize the first waypoint
-}
-
-ControlCommand Controller::getControls(const MyReference& ref, const Vehicle& veh, const state_type& x){
-    updateWaypoint(ref, x); // Update the closest waypoint with the new preview point
-    ControlCommand C {getSteerCommand(ref, x, veh),getAccelerationCommand(veh, ref, x)};
+ControlCommand Controller::getControls(const state_type& x){
+    updateLookahead(x[4]);  
+    updateWaypoint(x);
+    ControlCommand C {getSteerCommand(x),getAccelerationCommand(x)};
     return C;
 }
 
-double Controller::getAccelerationCommand(const Vehicle& veh, const MyReference& ref, const state_type& x){
-    int LAlong = 2;                         // Look additional x points in front of preview point (else velocity error could be zero)
-    int IDend = ref.v.size()-1;             // Index of last reference element
-    int ID = std::min(IDwp+LAlong,IDend);   // Make sure id does not exceed the vector length
-    double E = ref.v[ID]-x[4];              // Error
-    iE = iE + E*sim_dt;                     // Integral error
-
-    // Calculate acceleration command and constrain it
-    double aCmd = checkSaturation(veh.amin,veh.amax,Kp*E+Ki*iE);
-    return aCmd;
+void Controller::updateLookahead(double v){
+	// double tla{1.5}, dla_min{3.2}, dla_vmin{3};
+	double dla_c = dla_min - tla*dla_vmin; 
+	dla = std::max(dla_min,dla_c+tla*std::abs(v));
 };
 
-double Controller::getSteerCommand(const MyReference& ref, const state_type& x, const Vehicle& veh){
-    ym = getLateralError(ref,x,IDwp,Ppreview);                      // Get the lateral error at preview point, perpendicular to vehicle 
-    double Kus = 0.018;                                             // Understeer gradient
-    double cmdDelta = 2*((veh.L+Kus*x[4]*x[4])/pow(ctrl_dla,2))*ym; // Single preview point control (Schmeitz, 2017, "Towards a Generic Lateral Control Concept ...")
-    return checkSaturation(-veh.dmax,veh.dmax,cmdDelta);;           // Constrain with actuator saturation limits
-};
-
-void Controller::updateWaypoint(const MyReference& ref, const state_type& x){
-    updateLookahead(x[4]);  // Update the lookahead distance
+void Controller::updateWaypoint(const state_type& x){
     // Use lookahead distance to update the preview point
-    Ppreview.x = x[0] + ctrl_dla*ref.dir*std::cos(x[2]);
-    Ppreview.y = x[1] + ctrl_dla*ref.dir*std::sin(x[2]);
+    Ppreview.x = x[0] + dla*ref.dir*std::cos(x[2]);
+    Ppreview.y = x[1] + dla*ref.dir*std::sin(x[2]);
     // Update the waypoint ID
     IDwp = findClosestPoint(ref, Ppreview, IDwp);
 
     if (IDwp==(ref.x.size()-1)){
         endreached = 1;
     };
+};
+
+double Controller::getAccelerationCommand(const state_type& x){
+    int ID = std::min(IDwp+LAlong,refIDend);   // Make sure id does not exceed the vector length
+    double E = ref.v[ID]-x[4];              // Error
+    iE = iE + E*Ts;                     // Integral error
+    // Calculate acceleration command and constrain it
+    double aCmd = checkSaturation(veh.amin,veh.amax,Kp*E+Ki*iE);
+    return aCmd;
+};
+
+double Controller::getSteerCommand(const state_type& x){
+    ym = getLateralError(ref,x,IDwp,Ppreview);                      // Get the lateral error at preview point, perpendicular to vehicle 
+    double cmdDelta = 2*((veh.L+veh.Kus*x[4]*x[4])/pow(dla,2))*ym; // Single preview point control (Schmeitz, 2017, "Towards a Generic Lateral Control Concept ...")
+    return checkSaturation(-veh.dmax,veh.dmax,cmdDelta);;           // Constrain with actuator saturation limits
 };
 
 double getLateralError(const MyReference &ref, const state_type &x, const int& IDwp,const geometry_msgs::Point& Ppreview){
@@ -83,7 +86,6 @@ double getLateralError(const MyReference &ref, const state_type &x, const int& I
     double yval[3] {ref.y[IDmin],ref.y[IDmin+1],ref.y[IDmax]};
     // Extend preview point with vehicle heading
     double Xpreview[3] {Ppreview.x,Ppreview.y,x[2]};
-    // vector<double> Xpreview{Ppreview.x,Ppreview.y,x[2]};
     // Transform the extracted reference into local coordinates of the preview point
     double Txval[3], Tyval[3];
     transformToVehicle(xval,yval,Txval,Tyval,Xpreview);
@@ -91,7 +93,6 @@ double getLateralError(const MyReference &ref, const state_type &x, const int& I
     double ym = interpolate(Txval,Tyval);
     return ym;
 }
-
 
 int findClosestPoint(const MyReference& ref, const geometry_msgs::Point& point, int ID){
     // Find the point along the reference that is closest to the preview point
