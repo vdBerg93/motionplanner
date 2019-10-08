@@ -29,6 +29,8 @@ struct RoadFrame{
     poly xs;
     float c2,c1,c0;
     RoadFrame(vector<double> Xcar, vector<double> Cxy, vector<double> Cxs);
+    void setOrigin(){
+    }
 };
 
 #endif
