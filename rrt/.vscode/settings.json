@@ -8,6 +8,7 @@
         "array": "cpp",
         "cmath": "cpp",
         "complex": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "iostream": "cpp"
     }
 }

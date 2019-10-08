@@ -1,6 +1,11 @@
 #ifndef datatypes_h
 #define datatypes_h
 
+struct ControlCommand{
+    double dc, ac;
+    ControlCommand(double _dc, double _ac):dc(_dc),ac(_ac){};
+};
+
 typedef std::vector<double> state_type;
 struct veh_state{
     float x,y,head,d,v,a;

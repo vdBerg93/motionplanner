@@ -6,11 +6,6 @@
 
 using namespace std;
 
-struct ControlCommand{
-    double dc, ac;
-    ControlCommand(double _dc, double _ac):dc(_dc),ac(_ac){};
-};
-
 class Controller{
     public:
         // Waypoint

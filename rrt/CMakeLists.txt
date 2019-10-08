@@ -5,9 +5,9 @@ project(rrt)
 add_compile_options(-std=c++11)
 
 set( msg_dependencies
-	car_msgs
+	  car_msgs
   	std_msgs
- 	geometry_msgs
+ 	  geometry_msgs
 )
 
 ## Find catkin macros and libraries

@@ -4,15 +4,37 @@
 #include "rrt/rrtplanner.h"
 #include "car_msgs/Reference.h"
 #include <gazebo_msgs/LinkStates.h>
+#include "prius_msgs/Control.h"
 
 // #include "car_msgs/MotionPlan.h"
 class MsgManager{
     public:
         MsgManager(){
             subPos = nh.subscribe("gazebo/link_states",50,&MsgManager::stateCallback,this);
-            // subMP  = nh.subscribe("mission_planner/motion_plan",50,&MsgManager::motionPlanCallback,this);
             subMP  = nh.subscribe("mission_planner/motion_plan",50,&MsgManager::motionPlanCallback,this);
+            pub    = nh.advertise<prius_msgs::Control>("prius/", 50, this);
         }
+        void publishControls(const ControlCommand& controls){
+            // Range 0 to 1, 1 is max throttle
+            // Range 0 to 1, 1 is max brake
+            // Range -1 to +1, +1 is maximum left turn
+            // shift_gears: NO_COMMAND=0, NEUTRAL=1, FORWARD=2, REVERSE=3
+            prius_msgs::Control msg;
+            if (controls.ac>0){
+                msg.throttle = (1/2)*controls.ac;
+                msg.brake = 0;
+            }else if(controls.ac<0){
+                msg.throttle = 0;
+                msg.brake = abs((1/6)*controls.ac);
+            }else{
+                msg.throttle = 0;
+                msg.brake = 0;
+            }
+            msg.shift_gears = 2; // Shift to first gear
+            msg.steer = (1/0.5435)*controls.dc;
+            pub.publish(msg);
+        }
+
         MyReference getFirstPlan(){
             return motionQueue.front();
         }

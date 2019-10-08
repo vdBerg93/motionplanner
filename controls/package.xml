@@ -54,6 +54,7 @@
   <build_depend>rospy</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>rrt</build_depend>
+  <build_depend>prius_msgs</build_depend>
   <build_depend>gazebo_msgs</build_depend>
   <build_export_depend>geometry_msgs</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>

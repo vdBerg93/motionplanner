@@ -95,4 +95,5 @@ void MyRRT::addNodes(vector<Node> nodes){
 	for(int index = 0; index != nodes.size(); index++){
 	};
 }
+
 #endif

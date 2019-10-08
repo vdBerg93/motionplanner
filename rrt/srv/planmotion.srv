@@ -1,7 +1,0 @@
-float64[] state
-float64[] goal
-float64 vmax
-bool bend
----
-car_msgs/Reference[] ref
-car_msgs/Trajectory[] tra

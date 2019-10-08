@@ -16,6 +16,7 @@ set(msg_dependencies
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rrt
+  prius_msgs
   roscpp
   rospy
   ${msg_dependencies}

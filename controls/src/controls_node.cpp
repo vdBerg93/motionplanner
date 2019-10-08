@@ -1,6 +1,5 @@
 // Global variables
 using namespace std;
-
 // Include STDLIB headers
 #include <ros/ros.h>
 #include <iostream>
@@ -11,7 +10,6 @@ using namespace std;
 // Message headers
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
-
 // Headers from RRT package
 #include <rrt/functions.h>
 #include <rrt/datatypes.h>
@@ -26,19 +24,23 @@ using namespace std;
 int main( int argc, char** argv ){	
 	// Initialize node
 	ros::init(argc, argv, "controls_node");
-	
 	// Intialize object for node communication
 	MsgManager msgManager;
 	ros::Rate rate(25);
-
 	// Initialize controller
 	Controller ctrl;
-
+	
+	/*********************************************************************************
+		The message manager is responsible for maintaining a motion plan queue.
+	 	While the que is not empty, the controller repeatedly pick the first reference 
+	 	and executes this untill the end is reached.
+	*********************************************************************************/
 	while(ros::ok()){
 		if (msgManager.queueNotEmpty()){
 			ctrl.setReference(msgManager.getFirstPlan());
 			while(!ctrl.endreached){
-				ctrl.getControls(msgManager.getState());
+				ControlCommand controls = ctrl.getControls(msgManager.getState());
+				msgManager.publishControls(controls);
 				ros::spinOnce();
 			}
 			msgManager.popFirstPlan();

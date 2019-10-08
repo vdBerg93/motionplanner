@@ -6,6 +6,7 @@ project(pcl_converter)
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS 
 					roscpp 
+					car_msgs
 					# geometry_msgs
 					pcl_msgs
 					pcl_conversions

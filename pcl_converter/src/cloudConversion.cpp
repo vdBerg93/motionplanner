@@ -1,8 +1,25 @@
-void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
+struct Observer{
+	vision_msgs::Detection2DArray Obs;
+	void callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input);
+    bool callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp);
+};
+
+bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp){
+	for(int i = 0; i!= Obs.detections.size(); i++){
+		resp.obstacles.detections.push_back(Obs.detections[i]);
+	}
+	return true;
+}
+
+void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input)
 {
   	//#######################################################################
   	//#### Read data and perform segmentation and ground plane removal 
   	//#######################################################################
+
+	// 1. CLEAR DETECTIONS
+	Obs.detections.clear();
+
 
 	// Convert ROS message to pcl format 
   	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
@@ -67,10 +84,10 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
   	ec.extract (cluster_indices);
 
 	// Prepare  2D message
-	vision_msgs::Detection2DArray msgOut;
+	// vision_msgs::Detection2DArray msgOut;
   	vision_msgs::Detection2D det;
   	
-  	msgOut.header = input->header;
+  	// msgOut.header = input->header;
   	Eigen::Vector4f centroid;
 
 	// Dividing the clusters
@@ -95,14 +112,16 @@ void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& input)
 	findBestOBB(*cloud_cluster, det);
 
 	det.header = input->header;
-	msgOut.detections.push_back(det);
+	// msgOut.detections.push_back(det);
+	// Add detection to log for service call
+	Obs.detections.push_back(det);
 	
 	std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
 	std::stringstream ss;
 	ss << "cloud_cluster_" << j << ".pcd";
 	j++;
   }
-	pub.publish(msgOut); 	// publish messages
+	// pub.publish(msgOut); 	// publish messages
 }
 
 void findBestOBB(const pcl::PointCloud<pcl::PointXYZ> &cloud_cluster, vision_msgs::Detection2D &det){
