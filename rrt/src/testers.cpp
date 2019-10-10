@@ -1,6 +1,3 @@
-// #include "rrt/rrtplanner.h"
-// #include "rrt/collision.h"
-
 // // void testSample(){
 // //     Vehicle veh;
 // //     veh.setTalos();

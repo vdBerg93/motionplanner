@@ -6,14 +6,13 @@
 // Function primitives
 
 
-vector<OBB> getObstacleVector(ros::Publisher* ptrPub){
-    //(ptrSrv)->call(1);
-    
+vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det){
     vector<OBB> obstacleVector;
-    OBB obs1(Vector2D(125,0),2,5,0);
-    OBB obs2(Vector2D(40,0),2,5,0);
-    //obstacleVector.push_back(obs1);
-    obstacleVector.push_back(obs2);
+    for(int i = 0; i!=det.detections.size(); i++){
+        OBB obs(Vector2D(det.detections[i].bbox.center.x,det.detections[i].bbox.center.y),det.detections[i].bbox.size_x/2,det.detections[i].bbox.size_y/2,det.detections[i].bbox.center.theta);
+        obstacleVector.push_back(obs);
+    }
+
     if(draw_obs){    drawObstacles(ptrPub,obstacleVector);}
     return obstacleVector;
 }
@@ -34,7 +33,7 @@ void drawObstacles(ros::Publisher* ptrPub,vector<OBB> obstacleVector){
         // Line strip is red
         msg.color.r = 1.0;
         msg.color.a = 1.0;
-        msg.lifetime = ros::Duration();
+        msg.lifetime = ros::Duration(0.5);
         
         geometry_msgs::Point p;// int i = 0;
         p.x = obstacleVector[index].verticesX[3];
@@ -55,7 +54,7 @@ void drawObstacles(ros::Publisher* ptrPub,vector<OBB> obstacleVector){
 }
 
 
-bool checkCollision(ros::Publisher* ptrPub,StateArray T){
+bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vision_msgs::Detection2DArray& det){
     //return false; // Override collision check
     // Quickly check if trajectory exceeds the domain
     ROS_WARN_ONCE("TODO: In collision, implement domain check!");
@@ -66,7 +65,7 @@ bool checkCollision(ros::Publisher* ptrPub,StateArray T){
     //     }
     // }
     // Check if the trajectory2d obb separating axis theorem2d obb separating axis theorem collides with obstacles
-    vector<OBB> obstacleVector = getObstacleVector(ptrPub);
+    vector<OBB> obstacleVector = getOBBvector(ptrPub,det);
     for(int index = 0; index !=T.size(); index++){
         Vector2D vPos(T[index][0]+1.424*cos(T[index][2]),T[index][1]+1.424*sin(T[index][2]));
         OBB vOBB(vPos,2,4.848,T[index][2]); // Create vehicle OBB

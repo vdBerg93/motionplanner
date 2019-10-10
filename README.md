@@ -3,7 +3,7 @@
 ## To do
 * Make node for state estimation
 * Add function for splitting node into multiple smaller sections
-
+* Add variable sampling domain
 
 ## Getting Started
 

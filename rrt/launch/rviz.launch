@@ -24,4 +24,10 @@
 		output="screen"
 		required="true"
 	/>
+    <node
+    	pkg="rviz"
+		type="rviz"
+		name="rviz"
+		respawn="true"
+    />
 </launch>

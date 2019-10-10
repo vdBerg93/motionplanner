@@ -10,9 +10,12 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
+  State.msg
   Reference.msg
   Trajectory.msg
   MotionPlan.msg
+  MotionRequest.msg
+  MotionReponse.msg
 )
 
 add_service_files(

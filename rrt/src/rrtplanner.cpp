@@ -29,13 +29,13 @@ MyRRT::MyRRT(vector<double> state, vector<double> _goalPose){
 	tree.push_back(initialNode);
 }
 
-vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose){
+vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
 	MyRRT RRT(startState, goalPose);	// Initialize tree with first node
 	Timer timer(100); 				// Initialize timer class with time in ms
 	
 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
 	for(int iter = 0; timer.Get(); iter++){
-		expandTree(veh, RRT, ptrPub); 	// expand the tree
+		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
 		
 		if(debug_mode){	
 			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
@@ -47,8 +47,8 @@ vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> star
 };
 
 // Perform a tree expansion
-void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub){;
-	vector<double> sampleBounds {0,50,-1.75,5.25};
+void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det){;
+	vector<double> sampleBounds {0,100,-1.75,5.25};
 	//vector<double> sampleBounds {0,49,-1.75,4.75};
 	geometry_msgs::Point sample = sampleAroundVehicle(sampleBounds); 
 	vector<double> lanes {0,3.5}; double Lmax = 50;
@@ -76,7 +76,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub){;
 
 		// If trajectory is admissible and collisionfree, add it to the tree
 		if(sim.endReached||sim.goalReached){
-			if (!checkCollision(ptrPub,sim.stateArray)){
+			if (!checkCollision(ptrPub,sim.stateArray,det)){
 				Node node(sim.stateArray.back(), *it, ref,sim.stateArray, sim.costE + RRT.tree[*it].costE, sim.costS + RRT.tree[*it].costS, sim.goalReached);
 				RRT.addNode(node); 	node_added = true;
 				if(draw_tree){publishVisualization(ptrPub, RRT.tree.size(), ref, sim);}
@@ -93,7 +93,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub){;
 		
 		// If trajectory is admissible and collision free, add it to the tree
 		if(sim_goal.endReached||sim_goal.goalReached){
-			if(!checkCollision(ptrPub,sim_goal.stateArray)){
+			if(!checkCollision(ptrPub,sim_goal.stateArray,det)){
 				Node node_goal(sim_goal.stateArray.back(), RRT.tree.size()-1, ref_goal, sim_goal.stateArray,sim_goal.costE + RRT.tree.back().costE, sim_goal.costS + RRT.tree.back().costS, sim_goal.goalReached);
 				RRT.addNode(node_goal);
 				if(draw_tree){publishVisualization(ptrPub, RRT.tree.size(), ref_goal, sim_goal);}

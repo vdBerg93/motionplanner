@@ -8,20 +8,4 @@
 	<param 	name="ctrl/sampleTime" 	value="0.04"	/>
 	<param 	name="ctrl/Kp"		value="2"	/>
 	<param 	name="ctrl/Ki" 		value="0.05"	/>
-	<node
-		pkg="pcl_converter"
-		type="pcl_converter_node"
-		name="pcl_converter_node"
-		respawn="false"
-		required="true"
-        output="screen"
-	/>
-	<node
-		pkg="rrt"
-		type="rrt_node"
-		name="rrt_node"
-		respawn="false"
-		output="screen"
-		required="true"
-	/>
 </launch>
