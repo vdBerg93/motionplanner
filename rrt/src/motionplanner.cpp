@@ -47,7 +47,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	updateLookahead(carState[3]);	updateReferenceResolution(carState[3]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
-	cout<<"Goal"<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
+	cout<<"Cgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
 	// If road parametrization is available, convert motion spec to straightened scenario
 	if(req.bend){
 		// Convert the obstacles
@@ -56,12 +56,11 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		}
 		// Convert the goal
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
+		transformStates(carState,req.Cxy,veh);
 	}
 	// Check bending
-	for(int i = 0; i<=2; ++i){
-		cout<<"Cxy: "<<req.Cxy[i]<<" Cxs: "<<req.Cxs[i]<<endl;
-	}
-	cout<<"Goal"<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
+	cout<<"Sgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
+	cout<<"Sstate= "<<carState[0]<<", "<<carState[1]<<", "<<carState[2]<<", "<<carState[3]<<", "<<carState[4]<<", "<<carState[5]<<endl;
 	
 
 	// Build the tree
@@ -98,10 +97,10 @@ vector<double> getReqGoal(const car_msgs::MotionRequest& req){
 }
 
 void transformStates(vector<double>& states, const vector<double>& Cxy, const Vehicle& veh){
-	double curvature = (2*Cxy[0])/pow(pow(Cxy[1],2) + 1,3/2);
-	double delta = atan(curvature*veh.L);
-	states[3] -= delta;
-	states[4] = (states[5]*veh.L)*tan(delta);
+	double curvature = (2*Cxy[0])/pow(pow(Cxy[1],2) + 1,3/2);	// Curvature at x=0;
+	double delta = atan(curvature*veh.L); 						// Required steer angle to follow road curvature at x=0
+	states[3] -= delta;											// Subtract steer angle to straighten states
+	states[2] = (states[5]*veh.L)*tan(delta); 					// Update yawrate
 }
 
 void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cxy, const vector<double>& Cxs){

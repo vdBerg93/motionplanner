@@ -62,4 +62,5 @@ double checkSaturation(double min, double max, double val){
     return std::max(std::min(val,max),min);
 }
 
+
 #endif

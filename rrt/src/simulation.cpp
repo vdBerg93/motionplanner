@@ -4,7 +4,11 @@
 #include "rrt/simulation.h"
 #include "rrt/controller.h"
 
-void VehicleODE(ControlCommand& ctrl, state_type& x, state_type& dx){
+void enforceConstraints(const double& min, const double& max, double& val){
+    val = std::max(std::min(val,max),min);
+}
+
+void VehicleODE(ControlCommand& ctrl, state_type& x, state_type& dx, const Vehicle& veh){
     double Gss = 1/( 1 + pow((x[4]/20),2)); 	// Sideslip transfer function
 	dx[0] = x[4]*cos(x[2]);            			// xdot
     dx[1] = x[4]*sin(x[2]);            			// ydot
@@ -13,17 +17,23 @@ void VehicleODE(ControlCommand& ctrl, state_type& x, state_type& dx){
     dx[4] = x[5];                      			// vdot
     dx[5] = (1/0.3)*(ctrl.ac-x[5]);  			// adot
     dx[6] = 1;                          		// dt
+	// Constraints
+	enforceConstraints(veh.amin, veh.amax, dx[4]);
+	enforceConstraints(-veh.ddmax, veh.ddmax, dx[3]);
 };
 
-void IntegrateEuler(ControlCommand& ctrl, state_type& x, double& dt){
+void IntegrateEuler(ControlCommand& ctrl, state_type& x, double& dt, const Vehicle& veh){
 	state_type dx(7);
-	VehicleODE(ctrl, x, dx);
+	VehicleODE(ctrl, x, dx, veh);
 	for(int i = 0; i<= x.size(); i++){
 		x[i] = x[i] + dx[i]*dt;
 	};
+	// Constraints
+	enforceConstraints(-veh.dmax,veh.dmax,x[3]);
+	enforceConstraints(veh.amin, veh.amax, dx[5]);
 };
 
-Simulation::Simulation(const MyRRT& RRT, Node& node, MyReference& ref, Vehicle& veh){
+Simulation::Simulation(const MyRRT& RRT, Node& node, MyReference& ref, const Vehicle& veh){
 	costE = costS = goalReached = endReached = 0;
 	stateArray.push_back(node.state);
 	Controller control(ref,node.state);
@@ -40,7 +50,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 	for(int i = 0; i<(20/sim_dt); i++){
 		x = stateArray[i];
 		ControlCommand ctrlCmd = control.getControls(ref,veh,x);
-		IntegrateEuler(ctrlCmd, x, sim_dt);
+		IntegrateEuler(ctrlCmd, x, sim_dt, veh);
 		stateArray.push_back(x);
 		ROS_WARN_ONCE("TODO: In simulation: make lanewidth variable.");
 		double LaneWidth {3.5}; 
@@ -70,8 +80,14 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Stop simulation if goal is reached
 		double dist_to_goal = sqrt( pow(x[0]-RRT.goalPose[0],2) + pow(x[1]-RRT.goalPose[1],2));
 		// double goal_heading_error = angleDiff(x[2],RRT.goalPose[2]);
-		double goal_heading_error = abs(x[2]-RRT.goalPose[2]);
-		if ((dist_to_goal<=0.3)&&(goal_heading_error<0.05)){
+		double goal_heading_error = abs(angleDiff(x[2],RRT.goalPose[2]));
+		// if((dist_to_goal<1.5)){
+		// 	ROS_WARN("--- Near goal ---");
+		// 	ROS_WARN_STREAM("head car= "<<x[2]<<" head goal= "<<RRT.goalPose[2]);
+		// 	ROS_WARN_STREAM("Goal head E= "<<goal_heading_error);
+		// }
+		//if ((dist_to_goal<=0.3)&&(goal_heading_error<0.05)){
+		if ((dist_to_goal<=1)&&(goal_heading_error<0.05)){
 			goalReached = true; return;
 		}
 	}

@@ -15,7 +15,7 @@ add_message_files(
   Trajectory.msg
   MotionPlan.msg
   MotionRequest.msg
-  MotionReponse.msg
+  MotionResponse.msg
 )
 
 add_service_files(
