@@ -41,7 +41,7 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 	// Extend to account for lookahead distance
 	Pfar.x += Dextend*cos(goalPose[2]);
 	Pfar.y += Dextend*sin(goalPose[2]);
-	assert(Pfar.y==Pclose.y);
+	
 	// Segment lengths
 	double N1 = round(sqrt( pow(Pclose.x-node.ref.x.back(),2) + pow(Pclose.y-node.ref.y.back(),2))/ref_res)+1;
 	double N2 = round(sqrt( pow(Pfar.x-Pclose.x,2) + pow(Pfar.y-Pclose.y,2))/ref_res)+1;
@@ -62,10 +62,10 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 	return ref;
 };
 
-void generateVelocityProfile(	MyReference& ref, const Node& node, const int& IDwp, const double& vmax, const double& vend){
+void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend){
 	//// start generation of profile
 	// Slope shape configuration
-	double a_acc = 1;	  double a_dec = 1;	  double tmin = 1;   double v0 = node.state[4];
+	double a_acc = 1;	  double a_dec = 1;	  double tmin = 1;   double v0 = _v0;
 	// Total reference length
 	double Ltotal = sqrt( pow(ref.x.back()-ref.x.front(),2) + pow(ref.y.back()-ref.y.front(),2) ) ;
 	double res = Ltotal/(ref.x.size()-1); 		// ref_res of the reference path

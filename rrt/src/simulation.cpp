@@ -33,11 +33,11 @@ void IntegrateEuler(ControlCommand& ctrl, state_type& x, double& dt, const Vehic
 	enforceConstraints(veh.amin, veh.amax, dx[5]);
 };
 
-Simulation::Simulation(const MyRRT& RRT, Node& node, MyReference& ref, const Vehicle& veh){
+Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReference& ref, const Vehicle& veh){
 	costE = costS = goalReached = endReached = 0;
-	stateArray.push_back(node.state);
-	Controller control(ref,node.state);
-	generateVelocityProfile(ref,node,control.IDwp,vmax,vgoal);
+	stateArray.push_back(state);
+	Controller control(ref,state);
+	generateVelocityProfile(ref,state[4],control.IDwp,vmax,vgoal);
 	propagate(RRT, control,ref,veh);
 };
 
@@ -58,9 +58,11 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		costE = costE + x[4]*sim_dt;
 		// Update cost estimate for path selection
 		kappa = tan(x[3])/veh.L;
-		costS += (x[1]<0.5*LaneWidth)*w1*abs(kappa) +		// Less cost on curvature in first lane
-				(x[1]>=0.5*LaneWidth)*w2*abs(kappa) + 		// More cost on curvature in next lane
-				wc*abs(min(x[1],abs(x[1]-LaneWidth)));		// Cost on deviation from closest centerline
+		// costS += (x[1]<0.5*LaneWidth)*w1*abs(kappa) +		// Less cost on curvature in first lane
+		// 		(x[1]>=0.5*LaneWidth)*w2*abs(kappa) + 		// More cost on curvature in next lane
+		// 		wc*abs(min(x[1],abs(x[1]-LaneWidth)));		// Cost on deviation from closest centerline
+		ROS_WARN_ONCE("Update cost function to use reference frame");
+		costS += (x[1]<0.5*LaneWidth)*w1*abs(kappa); 
 		// Check acceleration limits
 		if (x[2]*abs(x[4])>2){
 			endReached = false; return;
@@ -81,12 +83,6 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		double dist_to_goal = sqrt( pow(x[0]-RRT.goalPose[0],2) + pow(x[1]-RRT.goalPose[1],2));
 		// double goal_heading_error = angleDiff(x[2],RRT.goalPose[2]);
 		double goal_heading_error = abs(angleDiff(x[2],RRT.goalPose[2]));
-		// if((dist_to_goal<1.5)){
-		// 	ROS_WARN("--- Near goal ---");
-		// 	ROS_WARN_STREAM("head car= "<<x[2]<<" head goal= "<<RRT.goalPose[2]);
-		// 	ROS_WARN_STREAM("Goal head E= "<<goal_heading_error);
-		// }
-		//if ((dist_to_goal<=0.3)&&(goal_heading_error<0.05)){
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.05)){
 			goalReached = true; return;
 		}

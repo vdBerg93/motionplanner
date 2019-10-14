@@ -11,16 +11,14 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   State.msg
-  Reference.msg
   Trajectory.msg
-  MotionPlan.msg
+  Reference.msg
   MotionRequest.msg
   MotionResponse.msg
 )
 
 add_service_files(
   FILES
-  planmotion.srv
   getobstacles.srv
 )
 

@@ -37,9 +37,12 @@ double ref_res, ref_int, ref_mindist, vmax, vgoal;
 #include "rrt/controller.h"
 #include "rrt/datatypes.h"
 #include "car_msgs/Reference.h"
-#include "car_msgs/planmotion.h"
-#include "car_msgs/Trajectory.h"
+
 #include "car_msgs/getobstacles.h"
+#include "car_msgs/MotionRequest.h"
+#include "car_msgs/MotionResponse.h"
+#include "car_msgs/State.h"
+#include "car_msgs/Trajectory.h"
  
 // Include classes
 #include "reference.cpp"
@@ -54,9 +57,7 @@ double ref_res, ref_int, ref_mindist, vmax, vgoal;
 ##############################*/
 // 1. Check cost function and node sorting heuristics
 
-#include "car_msgs/MotionRequest.h"
-#include "car_msgs/MotionReponse.h"
-#include "car_msgs/State.h"
+
 #include "motionplanner.cpp"
 // #include "matlabgen/transformCarToRoad.h"
 // #include "matlabgen/transformCarToRoad.cpp"
@@ -74,10 +75,7 @@ void updateParameters(){
 }
 
 int main( int argc, char** argv ){	
-
-	ROS_WARN_ONCE("In main: implement Car state straightening");
-
-	
+	ROS_WARN_ONCE("Adjust sampling functions to use reference frame");
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
 	ros::NodeHandle nh; ros::Rate rate(2);
@@ -93,10 +91,10 @@ int main( int argc, char** argv ){
 	//ros::ServiceServer server = nh.advertiseService("planmotion", &MotionPlanner::planMotion,&motionPlanner);
 	
 	// Motion request subscriber
-	ros::Subscriber sub  = nh.subscribe("motionrequest",100,&MotionPlanner::planMotion, &motionPlanner);
+	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
 
 	// Motion response publisher
-	ros::Publisher pubResp = nh.advertise<car_msgs::MotionReponse>("motionplan",100);
+	ros::Publisher pubResp = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",100);
 	motionPlanner.respPtr = &pubResp;
 
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);

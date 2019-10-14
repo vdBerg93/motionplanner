@@ -51,10 +51,13 @@ class MyRRT{
         bool reverseAllowed;
         bool goalReached;
         vector<double> goalPose;
-
         signed int direction;
-        MyRRT(vector<double> state, vector<double> _goalPose);
-        //vector<double> sortNodes();
+
+        // Tree iniitalization
+        MyRRT(const vector<double>& _goalPose);
+        void addInitialNode(const vector<double>& state);
+        void initCommittedPath(const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState);
+        // Tree operations
         void addNode(Node node);
         Node getNode(int ID);
         void addNodes(vector<Node> nodes);
@@ -66,7 +69,7 @@ class MyRRT{
         
 };
 
-void initializeTree(MyRRT& RRT);
+void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState);
 geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds);
 geometry_msgs::Point sampleOnLane(vector<double> lanes, double Lmax);
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det);
@@ -80,7 +83,7 @@ visualization_msgs::Marker createReferenceMsg(int iD, const MyReference& ref);
 
 
 // Reference generation functions
-void generateVelocityProfile(	MyReference& ref, const Node& node, const int& IDwp, const double& vmax, const double& vend);
+void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend);
 MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir);
 
 /* ----------------------------------------

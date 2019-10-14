@@ -1,18 +1,21 @@
 // Function primitives
-
-
-// vector<double> getReqState(car_msgs::MotionRequest req);
-vector<double> getReqGoal(const car_msgs::MotionRequest& req);
+// vector<double> getReqGoal(const car_msgs::MotionRequest& req);
 void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cxy, const vector<double>& Cxs);
 void transformPointRoadToCar(double& Xstraight, double& Ystraight,const vector<double>& Cxy, const vector<double>& Cxs);
 void transformPoseCarToRoad(double& Xcar, double& Ycar, double& Hcar, const vector<double>& Cxy, const vector<double>& Cxs);
 void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstraight, const vector<double>& Cxy, const vector<double>& Cxs);
 void transformStates(vector<double>& states, const vector<double>& Cxy, const Vehicle& veh);
+void bendPath(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs);
+void bendTrajectory(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs);
+void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose);
+void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose);
+void transformPathWorldToCar(vector<MyReference>& path, const vector<double>& carState);
+void transformSegmentCarToWorld(MyReference& segment, const vector<double>& carState);
 
 // Motion planner object for handling services, callbacks & clients
 struct MotionPlanner{
 		vector<MyReference> motionplan; 	// Current motion plan in global coordinates
-		vector<Node> tree;					// Tree
+		// vector<Node> tree;					// Tree
 		vector<double> state;
 		// RoadFrame roadFrame;
 		ros::ServiceClient* clientPtr;		// Pointer to client
@@ -34,7 +37,7 @@ bool MotionPlanner::updateObstacles(){
 
 void MotionPlanner::updateState(car_msgs::State msg){
 	state.clear();
-	state.insert(state.begin(), msg.state.begin(), msg.state.begin()+5);
+	state.insert(state.begin(), msg.state.begin(), msg.state.end());
 	assert(state.size()==6);
 }
 
@@ -62,25 +65,60 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Sgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
 	cout<<"Sstate= "<<carState[0]<<", "<<carState[1]<<", "<<carState[2]<<", "<<carState[3]<<", "<<carState[4]<<", "<<carState[5]<<endl;
 	
-
+	// Initialize tree
+	MyRRT RRT(req.goal);	// Initialize tree with first node
+	initializeTree(RRT, veh, motionplan, carState);
 	// Build the tree
-	vector<Node> tree = buildTree(veh, pubPtr,carState,req.goal,det);
-	vector<Node> bestPath = extractBestPath(tree,1);
+	Timer timer(100); 				// Initialize timer class with time in ms
+	for(int iter = 0; timer.Get(); iter++){
+		expandTree(veh, RRT, pubPtr, det); 	// expand the tree
+	};
+	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
+	vector<Node> bestPath = extractBestPath(RRT.tree,1);
+	bendPath(bestPath,req.Cxy,req.Cxs);
+	bendTrajectory(bestPath,req.Cxy,req.Cxs);
 	publishPlan(bestPath);
-	sleep(5);
-	cout<<"Replying to request..."<<endl<<"----------------------------------"<<endl;
+	cout<<"Replyed to request..."<<endl<<"----------------------------------"<<endl;
+}
+
+void bendPath(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs){
+	for(auto it = path.begin(); it!= path.end(); it++){
+		for(int i = 0; i != it->ref.x.size(); i++){
+			transformPointRoadToCar(it->ref.x[i],it->ref.y[i],Cxy,Cxs);
+		}
+	}
+}
+void bendTrajectory(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs){
+	for(auto it = path.begin(); it!= path.end(); it++){
+		for(auto it2 = it->tra.begin(); it2!= it->tra.end(); it2++){
+			transformPoseRoadToCar((*it2)[0],(*it2)[1],(*it2)[2],Cxy,Cxs);
+		}
+		// for(int i = 0; i != (it->tra.size()-1); it++){
+	}
 }
 
 void MotionPlanner::publishPlan(vector<Node> &path){
-	car_msgs::MotionReponse resp;
+	car_msgs::MotionResponse resp;
 	// Prepare message
 	for(vector<Node>::iterator it = path.begin(); it!=path.end(); ++it){
-		car_msgs::Reference ref; 	car_msgs::Trajectory tra;
+		car_msgs::Reference ref; 
 		ref.dir = it->ref.dir;
 		ref.x = it->ref.x;
 		ref.y = it-> ref.y;
 		ref.v = it->ref.v;
 		resp.ref.push_back(ref);
+	}
+	for(vector<Node>::iterator it = path.begin(); it!=path.end(); ++it){
+		car_msgs::Trajectory tra;
+		for(int i = 0; i!= it->tra.size(); i++){
+			tra.x.push_back(it->tra[i][0]);
+			tra.y.push_back(it->tra[i][1]);
+			tra.theta.push_back(it->tra[i][2]);
+			tra.delta.push_back(it->tra[i][3]);
+			tra.v.push_back(it->tra[i][4]);
+			tra.a.push_back(it->tra[i][5]);
+		}
+		resp.tra.push_back(tra);
 	}
 	(*respPtr).publish(resp);
 	// respPtr->publish(resp)
@@ -88,13 +126,17 @@ void MotionPlanner::publishPlan(vector<Node> &path){
 }
 
 // Get goal data from service message
-vector<double> getReqGoal(const car_msgs::MotionRequest& req){
-	vector<double> goal;
-	goal.insert(goal.begin(), req.goal.begin(), req.goal.begin()+3);
-	// for(int i=0; i!=3; i++){s
-	assert(goal.size()==4);
-	return goal;
-}
+// vector<double> getReqGoal(const car_msgs::MotionRequest& req){
+// 	vector<double> goal;
+// 	goal.insert(goal.begin(), req.goal.begin(), req.goal.begin()+3);
+// 	// for(int i=0; i!=3; i++){s
+// 	assert(goal.size()==4);
+// 	return goal;
+// }
+
+/**************************************
+ **** TRANSFORMATIONS *****************
+ *************************************/
 
 void transformStates(vector<double>& states, const vector<double>& Cxy, const Vehicle& veh){
 	double curvature = (2*Cxy[0])/pow(pow(Cxy[1],2) + 1,3/2);	// Curvature at x=0;
@@ -154,13 +196,9 @@ void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cx
 
 	// ***** Update coordinates *****
 	Xcar = Xstraight; Ycar = Ystraight;
-	// ROS_INFO_STREAM("Xarc="<<Xarc<<" Yarc="<<Yarc);
-	// ROS_INFO_STREAM("S="<<S<<" rho="<<rho);
-	// ROS_INFO_STREAM("Xstraight="<<Xstraight<<" Ystraight="<<Ystraight);
 }
 
 void transformPointRoadToCar(double& Xstraight, double& Ystraight,const vector<double>& Cxy, const vector<double>& Cxs){
-	ROS_WARN_ONCE("In tranformations: Extend with heading transformation");
     //##### Find point on straightened road #####
     double Xroads = (Xstraight - Cxy[2]*Cxy[1] + Cxy[1]*Ystraight)/(pow(Cxy[1],2) + 1);
     double Yroads = Cxy[2] + (Cxy[1]*(Xstraight - Cxy[2]*Cxy[1] + Cxy[1]*Ystraight))/(pow(Cxy[1],2) + 1);
@@ -240,16 +278,11 @@ void transformPoseCarToRoad(double& Xcar, double& Ycar, double& Hcar, const vect
     // Pstraight = [cos(theta),-sin(theta);sin(theta),cos(theta)]*[S;rho] + [0;Cxy[2]];
 
 	// ***** Update coordinates *****
-	ROS_WARN_ONCE("In transformPose: check is heading transformation are correct.");
 	Xcar = Xstraight; Ycar = Ystraight; Hcar = Hstraight;
 	assert((0<=Hcar)&(Hcar<=(2*pi)));
-	// ROS_INFO_STREAM("Xarc="<<Xarc<<" Yarc="<<Yarc);
-	// ROS_INFO_STREAM("S="<<S<<" rho="<<rho);
-	// ROS_INFO_STREAM("Xstraight="<<Xstraight<<" Ystraight="<<Ystraight);
 }
 
 void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstraight, const vector<double>& Cxy, const vector<double>& Cxs){
-	ROS_WARN_ONCE("In tranformations: Extend with heading transformation");
     //##### Find point on straightened road #####
     double Xroads = (Xstraight - Cxy[2]*Cxy[1] + Cxy[1]*Ystraight)/(pow(Cxy[1],2) + 1);
     double Yroads = Cxy[2] + (Cxy[1]*(Xstraight - Cxy[2]*Cxy[1] + Cxy[1]*Ystraight))/(pow(Cxy[1],2) + 1);
@@ -278,7 +311,39 @@ void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstrai
 	Xstraight = Xroadc; Ystraight = Yroadc; Hstraight = Hcar;
 }
 
+void transformPathWorldToCar(vector<MyReference>& path, const vector<double>& carState){
+	for(auto itP = path.begin(); itP!=path.end(); itP++){
+		for(int i = 0; i!=(*itP).x.size(); ++i){
+			transformPointWorldToCar((*itP).x[i], (*itP).y[i], carState);
+		}
+	}
+}
 
+void transformSegmentCarToWorld(MyReference& segment, const vector<double> & carState){
+	for(int i = 0; i!=segment.x.size(); ++i){
+		transformPointWorldToCar(segment.x[i], segment.y[i], carState);
+	}
+}
+
+void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose){
+	// Homogenous transformation from world to car
+	double Xc = cos(carPose[2])*Xw + sin(carPose[2])*Yw - carPose[1]*sin(carPose[2]) - carPose[0]*cos(carPose[2]);
+	double Yc = sin(carPose[2])*Xw + cos(carPose[2])*Yw - carPose[1]*cos(carPose[2]) + carPose[0]*sin(carPose[2]);
+	Xw = Xc; Yw = Yc;
+
+}
+
+void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose){
+	// Homogenous transformation from car to world
+	double Xw = cos(carPose[2])*Xc - sin(carPose[2])*Yc + carPose[0];
+	double Yw = sin(carPose[2])*Xc + cos(carPose[2])*Yc + carPose[1];
+	Xc = Xw; Yc = Yw;
+}
+
+
+/*********************************
+ ******* OLD FUNCTIONS ***********
+ ********************************/
 /*
 /////////////// MAIN WITH SERVICE /////////////////////
 bool MotionPlanner::planMotion(car_msgs::planmotion::Request& req, car_msgs::planmotion::Response& resp){

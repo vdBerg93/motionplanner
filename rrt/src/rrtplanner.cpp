@@ -7,12 +7,15 @@ using namespace std;
 
 void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simulation sim);
 
-MyRRT::MyRRT(vector<double> state, vector<double> _goalPose){
+MyRRT::MyRRT(const vector<double>& _goalPose){
 	goalReached = 0;
 	sortLimit = 10;
 	direction = 1;
     goalPose = _goalPose;
-    // Generate initial reference
+}
+
+void MyRRT::addInitialNode(const vector<double>& state){
+	// Generate initial reference
 	MyReference ref; 
     double xend = state[0]+cos(state[2])*ctrl_dla;
     double yend = state[1]+sin(state[2])*ctrl_dla;
@@ -29,22 +32,53 @@ MyRRT::MyRRT(vector<double> state, vector<double> _goalPose){
 	tree.push_back(initialNode);
 }
 
-vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
-	MyRRT RRT(startState, goalPose);	// Initialize tree with first node
-	Timer timer(100); 				// Initialize timer class with time in ms
-	
-	if(debug_mode){std::cout<< "Building tree..."<<endl;}
-	for(int iter = 0; timer.Get(); iter++){
-		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
-		
-		if(debug_mode){	
-			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
-			cout<<"Press key to continue..."<<endl; getchar();
+void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState){
+	// If committed path is empty, initialize tree with reference at (Dla,0)
+	if (path.size()==0){
+		RRT.addInitialNode(carState);
+		return;
+	}
+	// Else see which parts of path have been passed and erase these from the pathlist
+	for(auto it = path.begin(); it!=path.end(); ++it){
+		geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
+		int ID = findClosestPoint(*it,Ppreview,1);
+		if (ID >= (it->x.size()-3)){
+			path.erase(it);
 		}
-	};
-	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
-	return RRT.tree;
-};
+	}
+	// For the rest: propagate states to obtain nodes
+	vector<Node> nodeList;
+	for(auto it = path.begin(); it!=path.end(); ++it){
+			if(RRT.tree.size()==0){
+				Simulation sim(RRT,RRT.tree.back().state,*it,veh);
+				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE, sim.costS, sim.goalReached);
+				nodeList.push_back(node);
+			}else{
+				Simulation sim(RRT,carState,*it,veh);		
+				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE + RRT.tree.back().costE, sim.costS + RRT.tree.back().costS, sim.goalReached);
+				nodeList.push_back(node);
+			}
+	}
+	// Add last node as first node to tree
+	RRT.tree.push_back(nodeList.back());
+}
+
+// vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
+// 	// MyRRT RRT(startState, goalPose);	// Initialize tree with first node
+// 	Timer timer(100); 				// Initialize timer class with time in ms
+	
+// 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
+// 	for(int iter = 0; timer.Get(); iter++){
+// 		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
+		
+// 		if(debug_mode){	
+// 			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
+// 			cout<<"Press key to continue..."<<endl; getchar();
+// 		}
+// 	};
+// 	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
+// 	return RRT.tree;
+// };
 
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det){;
@@ -70,7 +104,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_m
 		if(debug_mode){cout<<endl<<"Trying to expand node "<<*it<<endl;}
 		
 		MyReference ref = getReference(sample, RRT.tree[*it], dir);	// Generate a reference path
-		Simulation sim(RRT,RRT.tree[*it],ref,veh);					// Do closed-loop prediction
+		Simulation sim(RRT,RRT.tree[*it].state,ref,veh);					// Do closed-loop prediction
 
 		if(debug_mode){cout<<"completed simulation."<<endl;};
 
@@ -89,7 +123,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_m
 	if ( node_added && feasibleGoalBias(RRT) ) { 
 		if(debug_mode){cout<<"Doing goal expansion..."<<endl;}
 		MyReference ref_goal = getGoalReference(veh, RRT.tree.back(), RRT.goalPose);
-		Simulation sim_goal(RRT,RRT.tree.back(), ref_goal,veh);				
+		Simulation sim_goal(RRT,RRT.tree.back().state, ref_goal,veh);				
 		
 		// If trajectory is admissible and collision free, add it to the tree
 		if(sim_goal.endReached||sim_goal.goalReached){
@@ -173,11 +207,12 @@ bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point
 	// Calculate reference heading
 	double angPar = atan2(node.ref.y.back()-node.ref.y.front(),node.ref.x.back()-node.ref.x.front());
 	double angNew = atan2(sample.y-node.ref.y.back(),sample.x-node.ref.x.back());
-	angNew = angNew + (node.ref.dir*rrt.direction<0)*pi;
+	// angNew = angNew + (node.ref.dir*rrt.direction<0)*pi;
 	// Calculate length of new reference
 	double Lref = sqrt( pow(node.ref.x.back()-sample.x,2) + pow(node.ref.y.back()-sample.y,2));
 	// Reject when heading difference exceeds limit
-	if (abs(wrapToPi(angNew-angPar)>(pi/4))){
+	// if (abs(wrapToPi(angNew-angPar)>(pi/4))){
+	if (abs(angleDiff(angNew,angPar)>(pi/4))){
         return false;
     }
 	// Reject when new reference would be too short (at least 3 data points)

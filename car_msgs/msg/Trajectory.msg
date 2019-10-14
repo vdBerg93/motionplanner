@@ -1,6 +1,6 @@
 float64[] x
 float64[] y
-float64[] d
-float64[] th
+float64[] theta
+float64[] delta
 float64[] v
-#State[] tra
+float64[] a
