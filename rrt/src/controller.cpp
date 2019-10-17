@@ -16,7 +16,7 @@ void updateLookahead(double v){
 }
 
 void updateReferenceResolution(double v){
-    double ref_int{0.2}, ref_mindist{0.2};
+    // double ref_int{0.2}, ref_mindist{0.2};
     ref_res = std::max(abs(v)*ref_int,ref_mindist);
 }
 
@@ -81,7 +81,6 @@ double getLateralError(const MyReference &ref, const state_type &x, const int& I
     double yval[3] {ref.y[IDmin],ref.y[IDmin+1],ref.y[IDmax]};
     // Extend preview point with vehicle heading
     double Xpreview[3] {Ppreview.x,Ppreview.y,x[2]};
-    // vector<double> Xpreview{Ppreview.x,Ppreview.y,x[2]};
     // Transform the extracted reference into local coordinates of the preview point
     double Txval[3], Tyval[3];
     transformToVehicle(xval,yval,Txval,Tyval,Xpreview);
@@ -124,11 +123,6 @@ void transformToVehicle(double (&xval)[3],double (&yval)[3],double (&Txval)[3],d
         Txval[i] = xval[i]*cos(x[2]) - x[0]*cos(x[2]) + yval[i]*sin(x[2])- x[1]*sin(x[2]);
         Tyval[i] = yval[i]*cos(x[2]) - x[1]*cos(x[2]) + xval[i]*sin(x[2])- x[0]*sin(x[2]);
     }
-    // for(int i = 0; i<=2; i++){
-    //     point2D point(ref[i].x*cos(x[2]) - x[0]*cos(x[2]) + ref[i].y*sin(x[2])- x[1]*sin(x[2]),
-    //                   ref[i].y*cos(x[2]) - x[1]*cos(x[2]) + ref[i].x*sin(x[2])- x[0]*sin(x[2]));
-    //     tref.push_back(point);
-    // }
     return;
 }
 
@@ -145,14 +139,5 @@ double interpolate(const double (&Txval)[3], const double (&Tyval)[3]){
         }
         y = y + Tyval[i]*L;
     }
-    // for(int i = 0; i<=2; i++){
-    //     L = 1;
-    //     for(int j = 0; j<=2; j++){
-    //         if (i!=j){
-    //             L = L*(tref[j].x)/(tref[i].x-tref[j].x);
-    //         }
-    //     }
-    //     y = y + tref[i].y*L;
-    // }
     return y;
 }

@@ -1,9 +1,9 @@
 <launch>
 	<!-- Initialize parameters -->
-	<param 	name="ctrl/tla"		value="1.5"	/>
+	<param 	name="ctrl/tla"		value="1"	/>
 	<param 	name="ctrl/mindla"	value="3.2"	/>
 	<param 	name="ctrl/dlavmin"	value="3"	/>
-	<param 	name="ctrl/refint"	value="0.2"	/>
+	<param 	name="ctrl/refint"	value="0.01"	/>
 	<param 	name="ctrl/refmindist"	value="0.2"	/>
 	<param 	name="ctrl/sampleTime" 	value="0.04"	/>
 	<param 	name="ctrl/Kp"		value="2"	/>

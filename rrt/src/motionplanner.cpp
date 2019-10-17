@@ -1,32 +1,46 @@
-// Function primitives
-// vector<double> getReqGoal(const car_msgs::MotionRequest& req);
-void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cxy, const vector<double>& Cxs);
-void transformPointRoadToCar(double& Xstraight, double& Ystraight,const vector<double>& Cxy, const vector<double>& Cxs);
+// Goal & state transformations
 void transformPoseCarToRoad(double& Xcar, double& Ycar, double& Hcar, const vector<double>& Cxy, const vector<double>& Cxs);
-void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstraight, const vector<double>& Cxy, const vector<double>& Cxs);
 void transformStates(vector<double>& states, const vector<double>& Cxy, const Vehicle& veh);
-void bendPath(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs);
-void bendTrajectory(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs);
-void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose);
+// Path input transformations
 void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose);
 void transformPathWorldToCar(vector<MyReference>& path, const vector<double>& carState);
-void transformSegmentCarToWorld(MyReference& segment, const vector<double>& carState);
+void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cxy, const vector<double>& Cxs);
+void transformPathCarToRoad(vector<MyReference>& path,const vector<double>& Cxy, const vector<double>& Cxs);
+// Path output transformations
+void transformPointRoadToCar(double& Xstraight, double& Ystraight,const vector<double>& Cxy, const vector<double>& Cxs);
+void transformPathRoadToCar(vector<MyReference>& path, const vector<double>& Cxy, const vector<double>& Cxs);
+void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose);
+void transformPathCarToWorld(vector<MyReference>& path, const vector<double>& worldState);
+
+
+// void transformPathRoadToCar(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs);
+void bendPlan(vector<MyReference>& plan, const vector<double>& Cxy, const vector<double>& Cxs);
+
+// Perhaps unnessecary
+void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstraight, const vector<double>& Cxy, const vector<double>& Cxs);
+void bendTrajectory(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs);
+void bendPath(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs);
+
+
+// void transformSegmentCarToWorld(MyReference& segment, const vector<double>& carState);
+vector<MyReference> getCommittedPath(vector<Node> bestPath, double Tc);
 
 // Motion planner object for handling services, callbacks & clients
 struct MotionPlanner{
-		vector<MyReference> motionplan; 	// Current motion plan in global coordinates
-		// vector<Node> tree;					// Tree
+		vector<MyReference> motionplan; 		// Current motion plan in global coordinates
 		vector<double> state;
 		// RoadFrame roadFrame;
-		ros::ServiceClient* clientPtr;		// Pointer to client
+		ros::ServiceClient* clientPtr;			// Pointer to client
 		ros::Publisher* pubPtr; 				// Pointer to Rviz markers
+		ros::Publisher* pubPlan;
 		ros::Publisher* respPtr;				// Pointer to response publisher
-		vision_msgs::Detection2DArray det;	// 2D OBB
+		vision_msgs::Detection2DArray det;		// 2D OBB
 		// bool planMotion(car_msgs::planmotion::Request& req, car_msgs::planmotion::Response& resp);
 		void planMotion(car_msgs::MotionRequest msg);
 		bool updateObstacles();
 		void updateState(car_msgs::State msg);
-		void publishPlan(vector<Node> &path);
+		void publishPlan(const vector<MyReference>& plan);
+		void publishNodes(vector<Node> &path);
 };
 
 bool MotionPlanner::updateObstacles(){
@@ -41,63 +55,137 @@ void MotionPlanner::updateState(car_msgs::State msg){
 	assert(state.size()==6);
 }
 
+vector<double> convertCarState(const vector<double>& worldState){
+	vector<double> carState = worldState;
+	carState[0] = 0; carState[1] = 0; carState[2]=0;
+	return carState;
+}
+
+ void showPath(const vector<MyReference>& path){
+	 cout<<"---path---"<<endl;
+	 for(auto it = path.begin(); it!=path.end(); it++){
+		 for( int j = 0; j!=it->x.size(); ++j){
+		 	cout<<"x= "<<it->x[j]<<" y= "<<it->y[j]<<endl;
+		 }
+	 }
+ }
+
 void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"----------------------------------"<<endl<<"Received request, processing..."<<endl;
 	// Update variables
 	Vehicle veh; veh.setTalos();	
 	vector<double> worldState = state;
-	vector<double> carState = worldState; carState[0]=0; carState[1]=0; carState[2]=0;
-	updateLookahead(carState[3]);	updateReferenceResolution(carState[3]); 
+	vector<double> carState = convertCarState(worldState);
+	updateLookahead(carState[4]);	updateReferenceResolution(carState[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
-	cout<<"Cgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
+
+	// Get the array of committed motion plans
+	// vector<MyReference> planCar = motionplan;
+	// transformPathWorldToCar(planCar,worldState);
+	transformPathWorldToCar(motionplan,worldState);
+	// showPath(planCar);
+	ROS_ERROR_STREAM("In MP: Check tranformation of motion plan");
 	// If road parametrization is available, convert motion spec to straightened scenario
 	if(req.bend){
+		// transformPathCarToRoad(planCar,req.Cxy,req.Cxs);
+		transformPathCarToRoad(motionplan,req.Cxy,req.Cxs);
+		// showPath(planCar);
 		// Convert the obstacles
-		for(int i = 0; i!=det.detections.size(); i++){
-			transformPoseCarToRoad(det.detections[i].bbox.center.x,det.detections[i].bbox.center.y,det.detections[i].bbox.center.theta,req.Cxy,req.Cxy);
+		for(auto it = det.detections.begin(); it!=det.detections.end(); ++it){
+			transformPoseCarToRoad(it->bbox.center.x,it->bbox.center.y,it->bbox.center.theta,req.Cxy,req.Cxy);
 		}
 		// Convert the goal
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
 		transformStates(carState,req.Cxy,veh);
 	}
-	// Check bending
-	cout<<"Sgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
-	cout<<"Sstate= "<<carState[0]<<", "<<carState[1]<<", "<<carState[2]<<", "<<carState[3]<<", "<<carState[4]<<", "<<carState[5]<<endl;
+	// For debugging
+	cout<<"Goal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
+	cout<<"WState= "<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<endl;
+	cout<<"CState= "<<carState[0]<<", "<<carState[1]<<", "<<carState[2]<<", "<<carState[3]<<", "<<carState[4]<<", "<<carState[5]<<endl;
 	
-	// Initialize tree
-	MyRRT RRT(req.goal);	// Initialize tree with first node
-	initializeTree(RRT, veh, motionplan, carState);
+	// Initialize RRT planner
+	MyRRT RRT(req.goal);	
+	double Tc = initializeTree(RRT, veh, motionplan, carState); 
+	cout<<"Initialized tree."<<endl;
+
 	// Build the tree
-	Timer timer(100); 				// Initialize timer class with time in ms
+	Timer timer(100); 				
 	for(int iter = 0; timer.Get(); iter++){
-		expandTree(veh, RRT, pubPtr, det); 	// expand the tree
+		expandTree(veh, RRT, pubPtr, det); 
 	};
 	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
+
+
+	// Select best path
 	vector<Node> bestPath = extractBestPath(RRT.tree,1);
-	bendPath(bestPath,req.Cxy,req.Cxs);
-	bendTrajectory(bestPath,req.Cxy,req.Cxs);
-	publishPlan(bestPath);
+	// Select a part to commit here
+	
+	if(Tc<Tcommit){
+		vector<MyReference> commit = getCommittedPath(bestPath, Tc);
+		if(req.bend){
+			transformPathRoadToCar(motionplan,req.Cxy,req.Cxs);
+			transformPathRoadToCar(commit,req.Cxy, req.Cxs);
+			// showPath(commit);
+		}
+		transformPathCarToWorld(motionplan,worldState);
+		transformPathCarToWorld(commit,worldState);
+		// showPath(commit);
+		// cout<<"finished bending..."<<endl;
+		publishPlan(commit);
+	}
+
+	// FOR DEBUGGING ONLY
+	if(req.bend){
+		bendPath(bestPath,worldState,req.Cxy,req.Cxs);
+		bendTrajectory(bestPath,worldState,req.Cxy,req.Cxs);
+	}
+	// Publish best path
+	publishNodes(bestPath);
 	cout<<"Replyed to request..."<<endl<<"----------------------------------"<<endl;
 }
 
-void bendPath(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs){
-	for(auto it = path.begin(); it!= path.end(); it++){
-		for(int i = 0; i != it->ref.x.size(); i++){
-			transformPointRoadToCar(it->ref.x[i],it->ref.y[i],Cxy,Cxs);
+vector<MyReference> getCommittedPath(vector<Node> bestPath, double Tc){
+	double Tnew{0}, i{0};
+	// Find committed reference
+	vector<MyReference> commit;
+	for(auto it = bestPath.begin(); it!=bestPath.end(); ++it){
+		double L = sqrt( pow(it->ref.x.back()-it->ref.x.front(),2) + pow(it->ref.y.back()-it->ref.y.front(),2) );
+		double res = L/(it->ref.x.size()-1);
+		MyReference path;
+		path.dir = it->ref.dir;
+		for(int j = 0; j!=((*it).ref.x.size()); ++j){
+			Tnew += res/(it->ref.v[j]);;
+			path.x.push_back(it->ref.x[j]);
+			path.y.push_back(it->ref.y[j]);
+			path.v.push_back(it->ref.v[j]);
+			if (((Tc+Tnew)>=2*Tcommit)&&(path.x.size()>=3)){
+				commit.push_back(path);
+				cout<<"commited a ref of size: "<<path.x.size()<<endl;
+				return commit;
+			}
 		}
+		commit.push_back(path);
+		cout<<"commited a ref of size: "<<path.x.size()<<endl;
 	}
-}
-void bendTrajectory(vector<Node>& path, const vector<double>& Cxy, const vector<double>& Cxs){
-	for(auto it = path.begin(); it!= path.end(); it++){
-		for(auto it2 = it->tra.begin(); it2!= it->tra.end(); it2++){
-			transformPoseRoadToCar((*it2)[0],(*it2)[1],(*it2)[2],Cxy,Cxs);
-		}
-		// for(int i = 0; i != (it->tra.size()-1); it++){
-	}
+	return commit;	
 }
 
-void MotionPlanner::publishPlan(vector<Node> &path){
+void MotionPlanner::publishPlan(const vector<MyReference>& plan){
+	car_msgs::MotionPlan resp;
+	for(auto it = plan.begin(); it!=plan.end(); ++it){
+		car_msgs::Reference ref;
+		ref.dir = it->dir;
+		ref.x.insert(ref.x.begin(), it->x.begin(), it->x.end());
+		ref.y.insert(ref.y.begin(), it->y.begin(), it->y.end());
+		ref.v.insert(ref.v.begin(), it->v.begin(), it->v.end());
+		resp.refArray.push_back(ref);
+		// motionplan.push_back(*it);
+	}
+	(*pubPlan).publish(resp);
+}
+
+void MotionPlanner::publishNodes(vector<Node> &path){
 	car_msgs::MotionResponse resp;
 	// Prepare message
 	for(vector<Node>::iterator it = path.begin(); it!=path.end(); ++it){
@@ -124,15 +212,6 @@ void MotionPlanner::publishPlan(vector<Node> &path){
 	// respPtr->publish(resp)
 	assert(resp.ref.size()==path.size());
 }
-
-// Get goal data from service message
-// vector<double> getReqGoal(const car_msgs::MotionRequest& req){
-// 	vector<double> goal;
-// 	goal.insert(goal.begin(), req.goal.begin(), req.goal.begin()+3);
-// 	// for(int i=0; i!=3; i++){s
-// 	assert(goal.size()==4);
-// 	return goal;
-// }
 
 /**************************************
  **** TRANSFORMATIONS *****************
@@ -311,6 +390,39 @@ void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstrai
 	Xstraight = Xroadc; Ystraight = Yroadc; Hstraight = Hcar;
 }
 
+
+void bendPath(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs){
+	for(auto it = path.begin(); it!= path.end(); it++){
+		for(int i = 0; i != it->ref.x.size(); i++){
+			transformPointRoadToCar(it->ref.x[i],it->ref.y[i],Cxy,Cxs);
+			transformPointCarToWorld(it->ref.x[i], it->ref.y[i], worldState);
+		}
+	}
+}
+void transformPathRoadToCar(vector<MyReference>& path, const vector<double>& Cxy, const vector<double>& Cxs){
+	for(auto it = path.begin(); it!= path.end(); it++){
+		for(int i = 0; i != it->x.size(); i++){
+			transformPointRoadToCar(it->x[i],it->y[i],Cxy,Cxs);
+		}
+	}
+}
+void transformPathCarToWorld(vector<MyReference>& path, const vector<double>& worldState){
+	for(auto it = path.begin(); it!= path.end(); it++){
+		for(int i = 0; i != it->x.size(); i++){
+			transformPointCarToWorld(it->x[i],it->y[i],worldState);
+		}
+	}
+}
+
+void bendTrajectory(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs){
+	for(auto it = path.begin(); it!= path.end(); it++){
+		for(auto it2 = it->tra.begin(); it2!= it->tra.end(); it2++){
+			transformPoseRoadToCar((*it2)[0],(*it2)[1],(*it2)[2],Cxy,Cxs);
+			transformPointCarToWorld((*it2)[0], (*it2)[1], worldState);
+		}
+	}
+}
+
 void transformPathWorldToCar(vector<MyReference>& path, const vector<double>& carState){
 	for(auto itP = path.begin(); itP!=path.end(); itP++){
 		for(int i = 0; i!=(*itP).x.size(); ++i){
@@ -319,9 +431,11 @@ void transformPathWorldToCar(vector<MyReference>& path, const vector<double>& ca
 	}
 }
 
-void transformSegmentCarToWorld(MyReference& segment, const vector<double> & carState){
-	for(int i = 0; i!=segment.x.size(); ++i){
-		transformPointWorldToCar(segment.x[i], segment.y[i], carState);
+void transformPathCarToRoad(vector<MyReference>& path,const vector<double>& Cxy, const vector<double>& Cxs){
+	for(auto itP = path.begin(); itP!=path.end(); itP++){
+		for(int i = 0; i!=(*itP).x.size(); ++i){
+			transformPointCarToRoad((*itP).x[i], (*itP).y[i],Cxy, Cxs);
+		}
 	}
 }
 
@@ -330,7 +444,6 @@ void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carP
 	double Xc = cos(carPose[2])*Xw + sin(carPose[2])*Yw - carPose[1]*sin(carPose[2]) - carPose[0]*cos(carPose[2]);
 	double Yc = sin(carPose[2])*Xw + cos(carPose[2])*Yw - carPose[1]*cos(carPose[2]) + carPose[0]*sin(carPose[2]);
 	Xw = Xc; Yw = Yc;
-
 }
 
 void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose){
@@ -340,60 +453,3 @@ void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carP
 	Xc = Xw; Yc = Yw;
 }
 
-
-/*********************************
- ******* OLD FUNCTIONS ***********
- ********************************/
-/*
-/////////////// MAIN WITH SERVICE /////////////////////
-bool MotionPlanner::planMotion(car_msgs::planmotion::Request& req, car_msgs::planmotion::Response& resp){
-	cout<<"----------------------------------"<<endl;
-	cout<<"Received request, processing..."<<endl;
-	// Update global variables
-	cout<<"test0"<<endl;
-	Vehicle veh; veh.setTalos();	
-	cout<<"size state="<<req.state.size()<<endl;
-	updateLookahead(req.state[3]);	updateReferenceResolution(req.state[3]); 
-	vmax = req.vmax; vgoal = req.goal[3];
-
-	// Actual motion plan querie as in pseudocode
-	vector<double> state = getReqState(req);	vector<double> goal = getReqGoal(req); updateObstacles();
-
-	// Build the tree
-	vector<Node> tree = buildTree(veh, ptrPub,state,goal);
-	vector<Node> bestPath = extractBestPath(tree,1);
-	publishPlan(bestPath, resp);
-	cout<<"Replying to request..."<<endl;
-	cout<<"----------------------------------"<<endl;
-	return true;
-}
-
-// Get state data from service message
-vector<double> getReqState(const car_msgs::MotionRequest& req){
-	vector<double> state;
-	for(int i =0; i!=5; i++){
-		state.push_back(req.state[i]);
-	}
-	return state;
-}
-void publishPlan(vector<Node> &path, car_msgs::planmotion::Response &resp){
-	// Prepare message
-	for(vector<Node>::iterator it = path.begin(); it!=path.end(); ++it){
-		car_msgs::Reference ref; 	car_msgs::Trajectory tra;
-		ref.dir = it->ref.dir;
-		ref.x = it->ref.x;
-		ref.y = it-> ref.y;
-		ref.v = it->ref.v;
-		resp.ref.push_back(ref);
-		for(vector<vector<double>>::iterator it2 = it->tra.begin(); it2!=it->tra.end(); ++it2){
-			tra.x.push_back( (*it2)[0]);
-			tra.y.push_back( (*it2)[1]);
-			tra.th.push_back( (*it2)[2]);
-			tra.d.push_back( (*it2)[3]);
-			tra.v.push_back( (*it2)[4]);
-		}
-		resp.tra.push_back(tra);
-	}
-	assert(resp.ref.size()==path.size());
-}
-*/

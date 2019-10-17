@@ -24,6 +24,7 @@ bool draw_states = 0;
 double sim_dt;
 double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
 double ref_res, ref_int, ref_mindist, vmax, vgoal;
+double Tcommit {0.2};
 
 // ros::Publisher* ptrPub;
 // ros::ServiceClient* ptrSrv;
@@ -43,6 +44,7 @@ double ref_res, ref_int, ref_mindist, vmax, vgoal;
 #include "car_msgs/MotionResponse.h"
 #include "car_msgs/State.h"
 #include "car_msgs/Trajectory.h"
+#include "car_msgs/MotionPlan.h"
  
 // Include classes
 #include "reference.cpp"
@@ -93,9 +95,12 @@ int main( int argc, char** argv ){
 	// Motion request subscriber
 	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
 
-	// Motion response publisher
-	ros::Publisher pubResp = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",100);
+	// Publisher for best path
+	ros::Publisher pubResp = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",100);
 	motionPlanner.respPtr = &pubResp;
+	// Publisher for committed path
+	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionPlan>("/motionplanner/response",100);
+	motionPlanner.pubPlan = &pubPlan;
 
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
 
@@ -110,17 +115,3 @@ int main( int argc, char** argv ){
 	}
 }
 
-// // Testing new functions
-// double Cxy[3] = {0.002,0.002,0.5};
-// double Cxs[3] = {0.000392853825889,0.984741064715002,0.122939454240854};
-// // double Csx[3] = {-0.000365738078703,1.013799256597537,-0.110077811210761};
-// double X{95}, Y{16.5}; 
-// double X0{95}, Y0{16.5}; 
-// cout<<"X0="<<X0<<" Y0="<<Y0<<endl;
-// transformCarToRoad(X,Y,Cxy,Cxs);
-// cout<<"After straightening..."<<endl;
-// cout<<"Xstraight="<<X<<" Ystraight="<<Y<<endl;
-// transformRoadToCar(X,Y,Cxy,Cxs);
-// cout<<"After bending..."<<endl;
-// cout<<"Xend="<<X<<" Yend="<<Y<<endl;
-// cout<<"Error="<<(sqrt( (X-X0)*(X-X0) + (Y-Y0)*(Y-Y0) ))<<endl;

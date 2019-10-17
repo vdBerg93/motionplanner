@@ -56,7 +56,6 @@ class MyRRT{
         // Tree iniitalization
         MyRRT(const vector<double>& _goalPose);
         void addInitialNode(const vector<double>& state);
-        void initCommittedPath(const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState);
         // Tree operations
         void addNode(Node node);
         Node getNode(int ID);
@@ -69,7 +68,7 @@ class MyRRT{
         
 };
 
-void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState);
+double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState);
 geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds);
 geometry_msgs::Point sampleOnLane(vector<double> lanes, double Lmax);
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det);

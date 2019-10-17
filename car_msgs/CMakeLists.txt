@@ -15,6 +15,7 @@ add_message_files(
   Reference.msg
   MotionRequest.msg
   MotionResponse.msg
+  MotionPlan.msg
 )
 
 add_service_files(

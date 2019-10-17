@@ -22,6 +22,8 @@ void MyRRT::addInitialNode(const vector<double>& state){
     int N = floor( sqrt( pow(state[0]-xend,2) + pow(state[1]-yend,2) )/ref_res);
     ref.x = LinearSpacedVector(state[0],xend,N);
     ref.y = LinearSpacedVector(state[0],yend,N);
+	// ref.x.push_back(xend);
+	// ref.y.push_back(yend);
     for(int i = 0; i!=N; i++){
         ref.v.push_back(state[4]);
     }
@@ -32,53 +34,48 @@ void MyRRT::addInitialNode(const vector<double>& state){
 	tree.push_back(initialNode);
 }
 
-void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState){
+double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState){
+	double Tc {0};
 	// If committed path is empty, initialize tree with reference at (Dla,0)
 	if (path.size()==0){
 		RRT.addInitialNode(carState);
-		return;
+		ROS_INFO_STREAM("Added simple node");
+		return Tc;
 	}
+	cout<<"MP size="<<path.size()<<endl;
 	// Else see which parts of path have been passed and erase these from the pathlist
+	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
 	for(auto it = path.begin(); it!=path.end(); ++it){
-		geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
+		assert(it->x.size()>=3);
 		int ID = findClosestPoint(*it,Ppreview,1);
 		if (ID >= (it->x.size()-3)){
-			path.erase(it);
+			cout<<"Erased part with length "<<it->x.size()<<endl;
+			path.erase(it--);
+			cout<<"MP size="<<path.size()<<endl;
 		}
 	}
+	cout<<"Trimmed MP size="<<path.size()<<endl;
 	// For the rest: propagate states to obtain nodes
 	vector<Node> nodeList;
 	for(auto it = path.begin(); it!=path.end(); ++it){
-			if(RRT.tree.size()==0){
-				Simulation sim(RRT,RRT.tree.back().state,*it,veh);
+			if(nodeList.size()==0){
+				Simulation sim(RRT,carState,*it,veh);
 				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE, sim.costS, sim.goalReached);
 				nodeList.push_back(node);
+				Tc += sim.stateArray.size()*sim_dt;
 			}else{
-				Simulation sim(RRT,carState,*it,veh);		
+				Simulation sim(RRT,RRT.tree.back().state,*it,veh);		
 				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE + RRT.tree.back().costE, sim.costS + RRT.tree.back().costS, sim.goalReached);
 				nodeList.push_back(node);
+				Tc += sim.stateArray.size()*sim_dt;
 			}
 	}
 	// Add last node as first node to tree
 	RRT.tree.push_back(nodeList.back());
+
+	return Tc;
 }
 
-// vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
-// 	// MyRRT RRT(startState, goalPose);	// Initialize tree with first node
-// 	Timer timer(100); 				// Initialize timer class with time in ms
-	
-// 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
-// 	for(int iter = 0; timer.Get(); iter++){
-// 		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
-		
-// 		if(debug_mode){	
-// 			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
-// 			cout<<"Press key to continue..."<<endl; getchar();
-// 		}
-// 	};
-// 	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
-// 	return RRT.tree;
-// };
 
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det){;
@@ -203,7 +200,6 @@ vector<int> sortNodesOptimize(const MyRRT& rrt, const geometry_msgs::Point& samp
 }
 
 bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point& sample){
-	ROS_WARN_ONCE("TODO: Improve node feasibility check");
 	// Calculate reference heading
 	double angPar = atan2(node.ref.y.back()-node.ref.y.front(),node.ref.x.back()-node.ref.x.front());
 	double angNew = atan2(sample.y-node.ref.y.back(),sample.x-node.ref.x.back());
@@ -212,7 +208,7 @@ bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point
 	double Lref = sqrt( pow(node.ref.x.back()-sample.x,2) + pow(node.ref.y.back()-sample.y,2));
 	// Reject when heading difference exceeds limit
 	// if (abs(wrapToPi(angNew-angPar)>(pi/4))){
-	if (abs(angleDiff(angNew,angPar)>(pi/4))){
+	if (abs(angleDiff(angNew,angPar))>(pi/4)){
         return false;
     }
 	// Reject when new reference would be too short (at least 3 data points)
@@ -275,8 +271,9 @@ vector<Node> extractBestPath(vector<Node> tree, bool structured){
 			bestPath.insert(bestPath.begin(), tree[parent]);
 			parent = bestPath.front().parentID;
 			// Stop when root node is reached
-			if(parent==(-1)){
-				break;
+			cout<<"par="<<parent<<endl;
+			if(parent==(0)){
+				return bestPath;
 			}
 		}
 	}
@@ -284,35 +281,7 @@ vector<Node> extractBestPath(vector<Node> tree, bool structured){
 }
 
 
-// MyReference mergeNodes(vector<Node> Nodes){
-// 	MyReference merged;
-// 	for(vector<Node>::iterator it = Nodes.end(); it!=Nodes.begin(); --it){
-// 		cout<<Nodes[0].ref.x.size()<<endl;
-// 		//cout<<"size: "<<it->ref.x.size();
-// 		for(int i = 0; i!= (it->ref.x.size()-1); i++){
-// 			merged.x.push_back(it->ref.x[i]);
-// 			merged.y.push_back(it->ref.x[i]);
-// 			merged.v.push_back(it->ref.v[i]);
-// 		}
-// 		cout<<"pushed back ..."<<endl;
-// 	}
-// 	merged.x.push_back(Nodes.front().ref.x.back());
-// 	merged.y.push_back(Nodes.front().ref.y.back());
-// 	merged.v.push_back(Nodes.front().ref.v.back());
-// 	return merged;
-// 	//vector<vector<double>> mergedPath;
-// 	// for(it; it!=Nodes.end(); ++it){
-// 	// 	mergedPath[0].insert(mergedPath[0].end(), it->ref.x.begin(), it->ref.x.end());
-// 	// 	mergedPath[1].insert(mergedPath[1].end(), it->ref.y.begin(), it->ref.y.end());
-// 	// 	mergedPath[2].insert(mergedPath[2].end(), it->ref.v.begin(), it->ref.v.end());
-// 	// 	if (it!=Nodes.end()){
-// 	// 		mergedPath[0].pop_back();
-// 	// 		mergedPath[1].pop_back();
-// 	// 		mergedPath[2].pop_back();
-// 	// 	}
-// 	// }
-// 	// return mergedPath;
-// }
+
 
 void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simulation sim){
 	visualization_msgs::Marker msg = createReferenceMsg(ID,ref);
@@ -417,3 +386,50 @@ float dubinsDistance(geometry_msgs::Point S, Node N, int dir){
         return rho*(alpha + asin(qw_x/df) - asin(rho*sin(alpha)/df));
     }
 }
+
+// vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
+// 	// MyRRT RRT(startState, goalPose);	// Initialize tree with first node
+// 	Timer timer(100); 				// Initialize timer class with time in ms
+	
+// 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
+// 	for(int iter = 0; timer.Get(); iter++){
+// 		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
+		
+// 		if(debug_mode){	
+// 			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
+// 			cout<<"Press key to continue..."<<endl; getchar();
+// 		}
+// 	};
+// 	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
+// 	return RRT.tree;
+// };
+
+// MyReference mergeNodes(vector<Node> Nodes){
+// 	MyReference merged;
+// 	for(vector<Node>::iterator it = Nodes.end(); it!=Nodes.begin(); --it){
+// 		cout<<Nodes[0].ref.x.size()<<endl;
+// 		//cout<<"size: "<<it->ref.x.size();
+// 		for(int i = 0; i!= (it->ref.x.size()-1); i++){
+// 			merged.x.push_back(it->ref.x[i]);
+// 			merged.y.push_back(it->ref.x[i]);
+// 			merged.v.push_back(it->ref.v[i]);
+// 		}
+// 		cout<<"pushed back ..."<<endl;
+// 	}
+// 	merged.x.push_back(Nodes.front().ref.x.back());
+// 	merged.y.push_back(Nodes.front().ref.y.back());
+// 	merged.v.push_back(Nodes.front().ref.v.back());
+// 	return merged;
+// 	//vector<vector<double>> mergedPath;
+// 	// for(it; it!=Nodes.end(); ++it){
+// 	// 	mergedPath[0].insert(mergedPath[0].end(), it->ref.x.begin(), it->ref.x.end());
+// 	// 	mergedPath[1].insert(mergedPath[1].end(), it->ref.y.begin(), it->ref.y.end());
+// 	// 	mergedPath[2].insert(mergedPath[2].end(), it->ref.v.begin(), it->ref.v.end());
+// 	// 	if (it!=Nodes.end()){
+// 	// 		mergedPath[0].pop_back();
+// 	// 		mergedPath[1].pop_back();
+// 	// 		mergedPath[2].pop_back();
+// 	// 	}
+// 	// }
+// 	// return mergedPath;
+// }
