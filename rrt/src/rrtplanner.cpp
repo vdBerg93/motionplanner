@@ -39,22 +39,22 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 	// If committed path is empty, initialize tree with reference at (Dla,0)
 	if (path.size()==0){
 		RRT.addInitialNode(carState);
-		ROS_INFO_STREAM("Added simple node");
+		ROS_INFO_STREAM("Initialized empty tree.");
 		return Tc;
 	}
-	cout<<"MP size="<<path.size()<<endl;
-	// Else see which parts of path have been passed and erase these from the pathlist
+
+	// See which parts of path have been passed and erase these from the pathlist
 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
 	for(auto it = path.begin(); it!=path.end(); ++it){
 		assert(it->x.size()>=3);
 		int ID = findClosestPoint(*it,Ppreview,1);
-		if (ID >= (it->x.size()-3)){
-			cout<<"Erased part with length "<<it->x.size()<<endl;
+		if ((path.size()>1)&&(ID >= (it->x.size()-3))){
 			path.erase(it--);
-			cout<<"MP size="<<path.size()<<endl;
 		}
 	}
-	cout<<"Trimmed MP size="<<path.size()<<endl;
+
+
+
 	// For the rest: propagate states to obtain nodes
 	vector<Node> nodeList;
 	for(auto it = path.begin(); it!=path.end(); ++it){
@@ -72,19 +72,16 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 	}
 	// Add last node as first node to tree
 	RRT.tree.push_back(nodeList.back());
-
+	ROS_INFO_STREAM("Initialized tree with last committed reference.");
 	return Tc;
 }
 
 
 // Perform a tree expansion
-void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det){;
-	vector<double> sampleBounds {0,100,-1.75,5.25};
-	//vector<double> sampleBounds {0,49,-1.75,4.75};
-	geometry_msgs::Point sample = sampleAroundVehicle(sampleBounds); 
-	vector<double> lanes {0,3.5}; double Lmax = 50;
-	//geometry_msgs::Point sample = sampleOnLane(lanes, Lmax);
-	
+void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det, const vector<double>& Cxy){;
+	vector<double> laneShifts {0,3.5}; double Lmax = 100;
+	geometry_msgs::Point sample = sampleOnLane(Cxy,laneShifts, Lmax);
+	// cout<<"Sx= "<<sample.x<<" s= "<<sample.y<<endl;
 	signed int dir = 1; 		// Driving direction variable
 	
 	// Sort existing nodes using randomly selected Heuristics
@@ -138,20 +135,33 @@ geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds){
 	geometry_msgs::Point sample;	
 	sample.x = sampleBounds[0] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(sampleBounds[1]-sampleBounds[0])));
 	sample.y = sampleBounds[2] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(sampleBounds[3]-sampleBounds[2])));
-	//cout<<"x="<<sample.x<<" y="<<sample.y<<endl;
 	if(debug_mode){cout<<"Generated sample: x="<<sample.x<<" y="<<sample.y<<endl;}
 	return sample;
 }
 
-geometry_msgs::Point sampleOnLane(vector<double> lanes, double Lmax){
-	geometry_msgs::Point sample;
+geometry_msgs::Point sampleOnLane(const vector<double>& Cxy, vector<double> laneShifts, double Lmax){
+	// If no lane information is available, sample around the vehicle
+	vector<double> sampleBounds {0,100,-10,10};
+	if(Cxy.size()==0){
+		return sampleAroundVehicle(sampleBounds);
+	}
+	// Else, sample w.r.t. the straightened road y(x) = c1*x + c0;
+	// 1. Sample length coordinate (S) on reference road centerline
+	double S = ctrl_dla + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(Lmax-ctrl_dla)));
+	// 2. Sample coordinate (rho) from lane shifts
 	// Select a random lane
-	double r = static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(((lanes.size()-1)))));
+	double r = static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(((laneShifts.size()-1)))));
 	int laneIndex = (int) floor(r+0.5);	
-	assert(0<=laneIndex<=(lanes.size()-1));
-	// Select random Length coordinate
-	sample.x = ctrl_dla + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(Lmax-ctrl_dla)));
-	sample.y = lanes[laneIndex];
+	double rho = laneShifts[laneIndex];
+	assert(0<=laneIndex<=(laneShifts.size()-1));
+    // Rotate (S,rho) with slope, translate with C0
+	double theta = atan2(Cxy[1], 1);
+	double Xstraight = cos(theta)*S - sin(theta)*rho;
+	double Ystraight = sin(theta)*S + cos(theta)*rho + Cxy[2];
+	// Prepare sample
+	geometry_msgs::Point sample;
+	sample.x = Xstraight;
+	sample.y = Ystraight;
 	if(debug_mode){cout<<"Generated sample: x="<<sample.x<<" y="<<sample.y<<endl;}
 	return sample;
 }
@@ -207,7 +217,6 @@ bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point
 	// Calculate length of new reference
 	double Lref = sqrt( pow(node.ref.x.back()-sample.x,2) + pow(node.ref.y.back()-sample.y,2));
 	// Reject when heading difference exceeds limit
-	// if (abs(wrapToPi(angNew-angPar)>(pi/4))){
 	if (abs(angleDiff(angNew,angPar))>(pi/4)){
         return false;
     }
@@ -271,7 +280,6 @@ vector<Node> extractBestPath(vector<Node> tree, bool structured){
 			bestPath.insert(bestPath.begin(), tree[parent]);
 			parent = bestPath.front().parentID;
 			// Stop when root node is reached
-			cout<<"par="<<parent<<endl;
 			if(parent==(0)){
 				return bestPath;
 			}
@@ -279,9 +287,6 @@ vector<Node> extractBestPath(vector<Node> tree, bool structured){
 	}
 	return bestPath;
 }
-
-
-
 
 void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simulation sim){
 	visualization_msgs::Marker msg = createReferenceMsg(ID,ref);
@@ -338,7 +343,7 @@ visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T
     msg.color.a = 1.0;
     msg.lifetime = ros::Duration();
     
-    geometry_msgs::Point p;// int i = 0;
+    geometry_msgs::Point p;
     for(int i = 0; i<T.size(); i++){
         p.x = T[i][0];
         p.y = T[i][1];
@@ -348,10 +353,8 @@ visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T
     return msg;    
 }
 
-// Distance measurement with the Dubins metric
-// Compared results with MATLAB: WORKING!
 float dubinsDistance(geometry_msgs::Point S, Node N, int dir){
-    //SWRI_PROFILE("DUBINS");
+    // Distance measurement with the Dubins metric
     float rho = 4.77;
     // 1. Subtract node location
     float qw_x = S.x - N.state[0];
@@ -386,50 +389,3 @@ float dubinsDistance(geometry_msgs::Point S, Node N, int dir){
         return rho*(alpha + asin(qw_x/df) - asin(rho*sin(alpha)/df));
     }
 }
-
-// vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
-// 	// MyRRT RRT(startState, goalPose);	// Initialize tree with first node
-// 	Timer timer(100); 				// Initialize timer class with time in ms
-	
-// 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
-// 	for(int iter = 0; timer.Get(); iter++){
-// 		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
-		
-// 		if(debug_mode){	
-// 			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
-// 			cout<<"Press key to continue..."<<endl; getchar();
-// 		}
-// 	};
-// 	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
-// 	return RRT.tree;
-// };
-
-// MyReference mergeNodes(vector<Node> Nodes){
-// 	MyReference merged;
-// 	for(vector<Node>::iterator it = Nodes.end(); it!=Nodes.begin(); --it){
-// 		cout<<Nodes[0].ref.x.size()<<endl;
-// 		//cout<<"size: "<<it->ref.x.size();
-// 		for(int i = 0; i!= (it->ref.x.size()-1); i++){
-// 			merged.x.push_back(it->ref.x[i]);
-// 			merged.y.push_back(it->ref.x[i]);
-// 			merged.v.push_back(it->ref.v[i]);
-// 		}
-// 		cout<<"pushed back ..."<<endl;
-// 	}
-// 	merged.x.push_back(Nodes.front().ref.x.back());
-// 	merged.y.push_back(Nodes.front().ref.y.back());
-// 	merged.v.push_back(Nodes.front().ref.v.back());
-// 	return merged;
-// 	//vector<vector<double>> mergedPath;
-// 	// for(it; it!=Nodes.end(); ++it){
-// 	// 	mergedPath[0].insert(mergedPath[0].end(), it->ref.x.begin(), it->ref.x.end());
-// 	// 	mergedPath[1].insert(mergedPath[1].end(), it->ref.y.begin(), it->ref.y.end());
-// 	// 	mergedPath[2].insert(mergedPath[2].end(), it->ref.v.begin(), it->ref.v.end());
-// 	// 	if (it!=Nodes.end()){
-// 	// 		mergedPath[0].pop_back();
-// 	// 		mergedPath[1].pop_back();
-// 	// 		mergedPath[2].pop_back();
-// 	// 	}
-// 	// }
-// 	// return mergedPath;
-// }

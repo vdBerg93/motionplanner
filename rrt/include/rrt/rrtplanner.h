@@ -70,8 +70,8 @@ class MyRRT{
 
 double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState);
 geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds);
-geometry_msgs::Point sampleOnLane(vector<double> lanes, double Lmax);
-void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det);
+geometry_msgs::Point sampleOnLane(const vector<double>& Cxy, vector<double> laneShifts, double Lmax);
+void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det, const vector<double>& Cxy);
 vector<int> sortNodesExplore(const MyRRT& rrt, const geometry_msgs::Point& sample);
 vector<int> sortNodesOptimize(const MyRRT& rrt, const geometry_msgs::Point& sample);
 bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point& sample);

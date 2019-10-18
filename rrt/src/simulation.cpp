@@ -62,7 +62,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// 		(x[1]>=0.5*LaneWidth)*w2*abs(kappa) + 		// More cost on curvature in next lane
 		// 		wc*abs(min(x[1],abs(x[1]-LaneWidth)));		// Cost on deviation from closest centerline
 		ROS_WARN_ONCE("Update cost function to use reference frame");
-		costS += (x[1]<0.5*LaneWidth)*w1*abs(kappa); 
+		costS += w1*abs(kappa); 
 		// Check acceleration limits
 		if (x[2]*abs(x[4])>2){
 			endReached = false; return;
@@ -81,9 +81,9 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		}
 		// Stop simulation if goal is reached
 		double dist_to_goal = sqrt( pow(x[0]-RRT.goalPose[0],2) + pow(x[1]-RRT.goalPose[1],2));
-		// double goal_heading_error = angleDiff(x[2],RRT.goalPose[2]);
 		double goal_heading_error = abs(angleDiff(x[2],RRT.goalPose[2]));
-		if ((dist_to_goal<=1)&&(goal_heading_error<0.05)){
+		
+		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
 			goalReached = true; return;
 		}
 	}

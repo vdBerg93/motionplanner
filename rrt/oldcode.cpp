@@ -369,3 +369,54 @@ void publishPlan(vector<Node> &path, car_msgs::planmotion::Response &resp){
 	assert(resp.ref.size()==path.size());
 }
 */
+
+/*********************************************
+ ****** RRT PLANNER **************************
+ ********************************************/
+
+// vector<Node> buildTree(Vehicle& veh, ros::Publisher* ptrPub, vector<double> startState, vector<double> goalPose, const vision_msgs::Detection2DArray& det){
+// 	// MyRRT RRT(startState, goalPose);	// Initialize tree with first node
+// 	Timer timer(100); 				// Initialize timer class with time in ms
+	
+// 	if(debug_mode){std::cout<< "Building tree..."<<endl;}
+// 	for(int iter = 0; timer.Get(); iter++){
+// 		expandTree(veh, RRT, ptrPub, det); 	// expand the tree
+		
+// 		if(debug_mode){	
+// 			ROS_INFO_STREAM("Tree is size "<<RRT.tree.size()<<" after " <<iter<<" iterations...");
+// 			cout<<"Press key to continue..."<<endl; getchar();
+// 		}
+// 	};
+// 	cout<<"Build complete, final tree size: "<<RRT.tree.size()<<endl;
+// 	return RRT.tree;
+// };
+
+// MyReference mergeNodes(vector<Node> Nodes){
+// 	MyReference merged;
+// 	for(vector<Node>::iterator it = Nodes.end(); it!=Nodes.begin(); --it){
+// 		cout<<Nodes[0].ref.x.size()<<endl;
+// 		//cout<<"size: "<<it->ref.x.size();
+// 		for(int i = 0; i!= (it->ref.x.size()-1); i++){
+// 			merged.x.push_back(it->ref.x[i]);
+// 			merged.y.push_back(it->ref.x[i]);
+// 			merged.v.push_back(it->ref.v[i]);
+// 		}
+// 		cout<<"pushed back ..."<<endl;
+// 	}
+// 	merged.x.push_back(Nodes.front().ref.x.back());
+// 	merged.y.push_back(Nodes.front().ref.y.back());
+// 	merged.v.push_back(Nodes.front().ref.v.back());
+// 	return merged;
+// 	//vector<vector<double>> mergedPath;
+// 	// for(it; it!=Nodes.end(); ++it){
+// 	// 	mergedPath[0].insert(mergedPath[0].end(), it->ref.x.begin(), it->ref.x.end());
+// 	// 	mergedPath[1].insert(mergedPath[1].end(), it->ref.y.begin(), it->ref.y.end());
+// 	// 	mergedPath[2].insert(mergedPath[2].end(), it->ref.v.begin(), it->ref.v.end());
+// 	// 	if (it!=Nodes.end()){
+// 	// 		mergedPath[0].pop_back();
+// 	// 		mergedPath[1].pop_back();
+// 	// 		mergedPath[2].pop_back();
+// 	// 	}
+// 	// }
+// 	// return mergedPath;
+// }

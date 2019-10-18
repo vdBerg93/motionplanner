@@ -21,17 +21,16 @@ MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir)
 
 MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalPose){;
 	double Dextend = ctrl_dla+10;//1.2;
-	double Dalign = 0.1;
+	double Dalign = 1;
 	
 	MyReference ref;
-	//double ref_res;	ros::param::get("/planner/ref_res",ref_res);
-	//double ref_res = max(node.state[4]*ref_interval,ref_mindist);
 
 	// Alignment
 	geometry_msgs::Point P1, P2, Pclose, Pfar;
 	P1.x = goalPose[0]+Dalign*cos(goalPose[2]); P1.y = goalPose[1]+Dalign*sin(goalPose[2]);
 	P2.x = goalPose[0]-Dalign*cos(goalPose[2]); P2.y = goalPose[1]-Dalign*sin(goalPose[2]);
-	
+	double H = atan2(P2.y-P1.y,P2.x-P1.x);
+	assert( (angleDiff(H,goalPose[2])<0.01));
 	// Select closest point
 	if( sqrt( pow(P1.x-node.ref.x.back(),2) + pow(P1.y-node.ref.y.back(),2)) < sqrt( pow(P2.x-node.ref.x.back(),2) + pow(P2.y-node.ref.y.back(),2))){
 		Pclose = P1; Pfar = P2; 
