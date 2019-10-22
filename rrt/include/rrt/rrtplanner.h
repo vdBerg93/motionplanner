@@ -52,9 +52,11 @@ class MyRRT{
         bool goalReached;
         vector<double> goalPose;
         signed int direction;
+        vector<double> laneShifts;   // Lane shifts. 1st element is goal lane. 2nd element is other lane
+        vector<double> Cxy;
 
         // Tree iniitalization
-        MyRRT(const vector<double>& _goalPose);
+        MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy);
         void addInitialNode(const vector<double>& state);
         // Tree operations
         void addNode(Node node);

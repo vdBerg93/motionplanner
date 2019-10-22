@@ -1,10 +1,11 @@
 // Global vars for debugging and plotting
-bool draw_tree = 0;
+bool draw_tree =0;
 bool draw_obs = 0;
 bool draw_final_path = 0;
 bool debug_mode = 0;
 bool debug_reference = 0;
 bool draw_states = 0;
+bool debug_sim = 0;
 
 // Include STDLIB headers
 #include <ros/ros.h>
@@ -24,7 +25,7 @@ bool draw_states = 0;
 double sim_dt;
 double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
 double ref_res, ref_int, ref_mindist, vmax, vgoal;
-double Tcommit {0.2};
+double Tcommit {1};
 
 // ros::Publisher* ptrPub;
 // ros::ServiceClient* ptrSrv;

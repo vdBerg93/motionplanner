@@ -21,6 +21,7 @@
         "hash_set": "cpp",
         "initializer_list": "cpp",
         "valarray": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "chrono": "cpp"
     }
 }

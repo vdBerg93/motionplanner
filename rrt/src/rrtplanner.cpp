@@ -7,11 +7,13 @@ using namespace std;
 
 void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simulation sim);
 
-MyRRT::MyRRT(const vector<double>& _goalPose){
+MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy){
 	goalReached = 0;
 	sortLimit = 10;
 	direction = 1;
     goalPose = _goalPose;
+	laneShifts = _laneShifts;
+	Cxy = _Cxy;
 }
 
 void MyRRT::addInitialNode(const vector<double>& state){
@@ -79,9 +81,12 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det, const vector<double>& Cxy){;
-	vector<double> laneShifts {0,3.5}; double Lmax = 100;
-	geometry_msgs::Point sample = sampleOnLane(Cxy,laneShifts, Lmax);
+	double Lmax = RRT.goalPose[0];// RRT.goalPose[0]
+	geometry_msgs::Point sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
+	// ROS_WARN_STREAM_ONCE("Sampledomain:"<<double(0)<<", "<<Lmax<<"-"<<RRT.laneShifts[0]<<", "<<RRT.laneShifts[1]);
 	// cout<<"Sx= "<<sample.x<<" s= "<<sample.y<<endl;
+	// vector<double> bounds = {0,150,-50,50};
+	// geometry_msgs::Point sample = sampleAroundVehicle(bounds);
 	signed int dir = 1; 		// Driving direction variable
 	
 	// Sort existing nodes using randomly selected Heuristics
@@ -141,7 +146,7 @@ geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds){
 
 geometry_msgs::Point sampleOnLane(const vector<double>& Cxy, vector<double> laneShifts, double Lmax){
 	// If no lane information is available, sample around the vehicle
-	vector<double> sampleBounds {0,100,-10,10};
+	vector<double> sampleBounds {0,150,-10,10};
 	if(Cxy.size()==0){
 		return sampleAroundVehicle(sampleBounds);
 	}
@@ -217,7 +222,7 @@ bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point
 	// Calculate length of new reference
 	double Lref = sqrt( pow(node.ref.x.back()-sample.x,2) + pow(node.ref.y.back()-sample.y,2));
 	// Reject when heading difference exceeds limit
-	if (abs(angleDiff(angNew,angPar))>(pi/4)){
+	if (abs(angleDiff(angNew,angPar))>(pi/8)){
         return false;
     }
 	// Reject when new reference would be too short (at least 3 data points)
@@ -249,7 +254,7 @@ bool feasibleGoalBias(const MyRRT& rrt){
 	double sgn = sign(cos(rrt.goalPose[2]+M_PI_2-angleRef));
 	double angle = sgn*minAngleDiff;
 	// Check if angle lies is within limits
-	bool angle_within_limits = abs(angle)<(M_PI_4);
+	bool angle_within_limits = abs(angle)<(M_PI_4/2);
 
 	return outside_left_circle*outside_right_circle*angle_within_limits;
 }
@@ -262,8 +267,6 @@ vector<Node> extractBestPath(vector<Node> tree, bool structured){
 		if(tree[nodeid].goalReached){
 			if(structured){
 				pair_vector.push_back(make_pair(nodeid,tree[nodeid].costS));
-			}else{
-				pair_vector.push_back(make_pair(nodeid,tree[nodeid].costE));
 			}
 		}
 	}

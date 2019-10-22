@@ -99,14 +99,17 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"CState= "<<carPose[0]<<", "<<carPose[1]<<", "<<carPose[2]<<", "<<carPose[3]<<", "<<carPose[4]<<", "<<carPose[5]<<endl;
 	
 	// Initialize RRT planner
-	MyRRT RRT(req.goal);	
+	vector<double> laneS = {3.5,0,-3.5};
+	// MyRRT RRT(req.goal,req.laneShifts,req.Cxy);	
+	MyRRT RRT(req.goal,laneS,req.Cxy);	
 	double Tc = initializeTree(RRT, veh, motionplan, carPose); 
 	cout<<"Initial node:"<<endl;
 	cout<<"Begin= ["<<RRT.tree.front().ref.x.front()<<", "<<RRT.tree.front().ref.y.front()<<"]"<<endl;
 	cout<<"End= ["<<RRT.tree.front().ref.x.back()<<", "<<RRT.tree.front().ref.y.back()<<"]"<<endl;
+	cout<<"State= ["<<RRT.tree.front().state[0]<<", "<<RRT.tree.front().state[1]<<", "<<RRT.tree.front().state[2]<<"]"<<endl;
 
 	// Build the tree
-	Timer timer(100); int iter = 0;				
+	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
@@ -120,7 +123,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		sleep(100);
 	}
 	vector<MyReference> commit;
-	if(Tc<Tcommit){
+	if(Tc<0.5*Tcommit){
 		commit = getCommittedPath(bestPath, Tc);
 	}else{
 		ROS_INFO_STREAM("No commitment required.");

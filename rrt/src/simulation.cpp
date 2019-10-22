@@ -8,8 +8,9 @@ void enforceConstraints(const double& min, const double& max, double& val){
     val = std::max(std::min(val,max),min);
 }
 
-void VehicleODE(ControlCommand& ctrl, state_type& x, state_type& dx, const Vehicle& veh){
-    double Gss = 1/( 1 + pow((x[4]/20),2)); 	// Sideslip transfer function
+state_type VehicleODE(ControlCommand& ctrl, state_type& x, const Vehicle& veh){
+    state_type dx(7);
+	double Gss = 1/( 1 + pow((x[4]/20),2)); 	// Sideslip transfer function
 	dx[0] = x[4]*cos(x[2]);            			// xdot
     dx[1] = x[4]*sin(x[2]);            			// ydot
     dx[2] = (x[4]/2.885)*tan(x[3])*Gss;			// thetadot
@@ -20,11 +21,10 @@ void VehicleODE(ControlCommand& ctrl, state_type& x, state_type& dx, const Vehic
 	// Constraints
 	enforceConstraints(veh.amin, veh.amax, dx[4]);
 	enforceConstraints(-veh.ddmax, veh.ddmax, dx[3]);
+	return dx;
 };
 
-void IntegrateEuler(ControlCommand& ctrl, state_type& x, double& dt, const Vehicle& veh){
-	state_type dx(7);
-	VehicleODE(ctrl, x, dx, veh);
+void IntegrateEuler(ControlCommand& ctrl, state_type& x, state_type& dx, double& dt, const Vehicle& veh){
 	for(int i = 0; i<= x.size(); i++){
 		x[i] = x[i] + dx[i]*dt;
 	};
@@ -41,31 +41,40 @@ Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReferenc
 	propagate(RRT, control,ref,veh);
 };
 
+double getDistToLane(const double& x, const double& y, double S, const vector<double>& Cxy){
+	double Lx = (x - S*Cxy[1] + y*Cxy[1] - Cxy[1]*Cxy[2])/(pow(Cxy[1],2) + 1);
+	double Ly = S + Cxy[2] + (Cxy[1]*(x - S*Cxy[1] + y*Cxy[1] - Cxy[1]*Cxy[2]))/(pow(Cxy[1],2) + 1);
+	return sqrt( pow(Lx-x,2) + pow(Ly-y,2) );
+}
+
 void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReference& ref, const Vehicle& veh){
-	double kappa;
-	// int w1 = 160; int w2 = 80; int wc = 2;
 	int w1 = 160; int w2 = 80; int wc = 2;
-	state_type x(7), dx(7);
 
 	for(int i = 0; i<(20/sim_dt); i++){
-		x = stateArray[i];
+		state_type x = stateArray[i];
 		ControlCommand ctrlCmd = control.getControls(ref,veh,x);
-		IntegrateEuler(ctrlCmd, x, sim_dt, veh);
+		state_type dx = VehicleODE(ctrlCmd, x, veh);
+		IntegrateEuler(ctrlCmd, x, dx, sim_dt, veh);
 		stateArray.push_back(x);
-		ROS_WARN_ONCE("TODO: In simulation: make lanewidth variable.");
-		double LaneWidth {3.5}; 
 		// Update cost estimate for exploration
 		costE = costE + x[4]*sim_dt;
 		// Update cost estimate for path selection
-		kappa = tan(x[3])/veh.L;
-		// costS += (x[1]<0.5*LaneWidth)*w1*abs(kappa) +		// Less cost on curvature in first lane
-		// 		(x[1]>=0.5*LaneWidth)*w2*abs(kappa) + 		// More cost on curvature in next lane
-		// 		wc*abs(min(x[1],abs(x[1]-LaneWidth)));		// Cost on deviation from closest centerline
-		ROS_WARN_ONCE("Update cost function to use reference frame");
+		double kappa = tan(x[3])/veh.L;
+
+		// double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
+		// double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
+		// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
+		// 		(Dgoallane<Dotherlane)*w2*abs(kappa) + 		// More cost on curvature in next lane
+		// 		wc*Dgoallane;
+				// wc*abs(min(x[1],abs(x[1]-LaneWidth)));		// Cost on deviation from closest centerline
 		costS += w1*abs(kappa); 
+
 		// Check acceleration limits
-		if (x[2]*abs(x[4])>2){
-			endReached = false; return;
+		// Alternative: ay = r*u, ay = u^2 *tan(delta)/L
+		double ay = abs(x[4]*dx[2]);
+		if ( ay> 3){
+			if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3];);}
+			// endReached = false; return;
 		}
 		if (draw_states){
 			// Print the states
@@ -77,6 +86,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double term_velocity = 0.1;
 		if((control.endreached)&&(abs(x[4]-ref.v.back())<term_velocity)){
+			if(debug_sim){	ROS_INFO_STREAM("end reached");}
 			endReached = true; return;
 		}
 		// Stop simulation if goal is reached
@@ -84,8 +94,12 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		double goal_heading_error = abs(angleDiff(x[2],RRT.goalPose[2]));
 		
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
+		if(debug_sim){	ROS_INFO_STREAM("goal reached");}
 			goalReached = true; return;
 		}
-	}
+		// if (control.ym>10){
+		// 	sleep(1);
+		// }
+	}	
 
 };
