@@ -24,8 +24,8 @@ void MyRRT::addInitialNode(const vector<double>& state){
     int N = floor( sqrt( pow(state[0]-xend,2) + pow(state[1]-yend,2) )/ref_res);
     ref.x = LinearSpacedVector(state[0],xend,N);
     ref.y = LinearSpacedVector(state[0],yend,N);
-	// ref.x.push_back(xend);
-	// ref.y.push_back(yend);
+	// ref.x.push_back(0);
+	// ref.y.push_back(0);
     for(int i = 0; i!=N; i++){
         ref.v.push_back(state[4]);
     }
@@ -46,17 +46,24 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 	}
 
 	// See which parts of path have been passed and erase these from the pathlist
+	// 1. Loop through reference segments
+	// 2. Find point closest to preview point
+	// 3. Reference has been passed if ID is at end of reference -> erase
 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
 	for(auto it = path.begin(); it!=path.end(); ++it){
 		assert(it->x.size()>=3);
 		int ID = findClosestPoint(*it,Ppreview,1);
-		if ((path.size()>1)&&(ID >= (it->x.size()-3))){
+		if ((ID >= (it->x.size()-3))){
+		// if ((path.size()>1)&&(ID >= (it->x.size()-3))){
 			path.erase(it--);
 		}
 	}
 
-
-
+	if(path.size()==0){
+		ROS_ERROR_STREAM("All nodes were erased.");
+	}
+	assert(path.size()!=0);
+	
 	// For the rest: propagate states to obtain nodes
 	vector<Node> nodeList;
 	for(auto it = path.begin(); it!=path.end(); ++it){
@@ -66,8 +73,8 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 				nodeList.push_back(node);
 				Tc += sim.stateArray.size()*sim_dt;
 			}else{
-				Simulation sim(RRT,RRT.tree.back().state,*it,veh);		
-				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE + RRT.tree.back().costE, sim.costS + RRT.tree.back().costS, sim.goalReached);
+				Simulation sim(RRT,nodeList.back().state,*it,veh);		
+				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE + nodeList.back().costE, sim.costS + nodeList.back().costS, sim.goalReached);
 				nodeList.push_back(node);
 				Tc += sim.stateArray.size()*sim_dt;
 			}
@@ -279,13 +286,9 @@ vector<Node> extractBestPath(vector<Node> tree, bool structured){
 		bestPath.push_back(tree[pair_vector.front().first]);
 		// Backtracking
 		int parent = bestPath.front().parentID;
-		for(int i = 0; i<tree.size(); i++){
+		while (parent!=0){
 			bestPath.insert(bestPath.begin(), tree[parent]);
 			parent = bestPath.front().parentID;
-			// Stop when root node is reached
-			if(parent==(0)){
-				return bestPath;
-			}
 		}
 	}
 	return bestPath;

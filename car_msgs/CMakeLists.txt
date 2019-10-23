@@ -3,6 +3,7 @@ project(car_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
   message_generation
+  geometry_msgs
   vision_msgs
   std_msgs
   rospy
@@ -10,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
+  Obstacle2D.msg
   State.msg
   Trajectory.msg
   Reference.msg
@@ -27,6 +29,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   vision_msgs
+  geometry_msgs
 )
 
 catkin_package(

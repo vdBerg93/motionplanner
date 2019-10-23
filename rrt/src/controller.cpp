@@ -120,8 +120,10 @@ void transformToVehicle(double (&xval)[3],double (&yval)[3],double (&Txval)[3],d
     // 3. Loop through the points and transform them
     //      pointTransformed = Hinv*[Rx;Ry;1];
     for(int i = 0; i<=2; i++){
-        Txval[i] = xval[i]*cos(x[2]) - x[0]*cos(x[2]) + yval[i]*sin(x[2])- x[1]*sin(x[2]);
+        Txval[i] = xval[i]*cos(x[2]) - x[0]*cos(x[2]) - yval[i]*sin(x[2])+ x[1]*sin(x[2]);
         Tyval[i] = yval[i]*cos(x[2]) - x[1]*cos(x[2]) + xval[i]*sin(x[2])- x[0]*sin(x[2]);
+        	// double Xc = Xw*cos(carPose[2]) - carPose[0]*cos(carPose[2]) - carPose[1]*sin(carPose[2]) + Yw*sin(carPose[2]);
+            // double Yc = Yw*cos(carPose[2]) - carPose[1]*cos(carPose[2]) + carPose[0]*sin(carPose[2]) - Xw*sin(carPose[2]);
     }
     return;
 }

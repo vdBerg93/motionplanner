@@ -6,6 +6,8 @@ bool debug_mode = 0;
 bool debug_reference = 0;
 bool draw_states = 0;
 bool debug_sim = 0;
+bool commit_path = 1;
+double Tcommit {0.4};
 
 // Include STDLIB headers
 #include <ros/ros.h>
@@ -25,7 +27,6 @@ bool debug_sim = 0;
 double sim_dt;
 double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
 double ref_res, ref_int, ref_mindist, vmax, vgoal;
-double Tcommit {1};
 
 // ros::Publisher* ptrPub;
 // ros::ServiceClient* ptrSrv;
@@ -78,7 +79,6 @@ void updateParameters(){
 }
 
 int main( int argc, char** argv ){	
-	ROS_WARN_ONCE("Adjust sampling functions to use reference frame");
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
 	ros::NodeHandle nh; ros::Rate rate(2);

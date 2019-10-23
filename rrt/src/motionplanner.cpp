@@ -1,3 +1,4 @@
+void predictState(vector<double>& X0, const Vehicle& veh, double t);
 // Goal & state transformations
 void transformPoseCarToRoad(double& Xcar, double& Ycar, double& Hcar, const vector<double>& Cxy, const vector<double>& Cxs);
 void transformStates(vector<double>& states, const vector<double>& Cxy, const Vehicle& veh);
@@ -78,7 +79,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
-	cout<<"Cgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
+
 	// Get the array of committed motion plans
 	transformPathWorldToCar(motionplan,worldState);
 	// If road parametrization is available, convert motion spec to straightened scenario
@@ -92,24 +93,25 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
 		transformStates(carPose,req.Cxy,veh);
 	}
+	// Predict state after tree build
+	vector<double> Xend = carPose;
+	predictState(Xend,veh,0.06);
+	cout<<"Pred. state= ["<<Xend[0]<<", "<<Xend[1]<<", "<<Xend[2]<<", "<<Xend[3]<<", "<<Xend[4]<<", "<<Xend[5]<<", ]"<<endl;
+
 	// For debugging
 	cout<<"# Obstacles= "<<det.detections.size()<<endl;
-	cout<<"Rgoal= "<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<endl;
-	cout<<"WState= "<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<endl;
-	cout<<"CState= "<<carPose[0]<<", "<<carPose[1]<<", "<<carPose[2]<<", "<<carPose[3]<<", "<<carPose[4]<<", "<<carPose[5]<<endl;
+	cout<<"WState= ["<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<", ]"<<endl;
 	
 	// Initialize RRT planner
-	vector<double> laneS = {3.5,0,-3.5};
-	// MyRRT RRT(req.goal,req.laneShifts,req.Cxy);	
-	MyRRT RRT(req.goal,laneS,req.Cxy);	
-	double Tc = initializeTree(RRT, veh, motionplan, carPose); 
-	cout<<"Initial node:"<<endl;
+	MyRRT RRT(req.goal,req.laneShifts,req.Cxy);	
+	cout<<"Created tree object"<<endl;
+	double Tc = initializeTree(RRT, veh, motionplan, Xend);
+	cout<<"Initial node: Tc="<<Tc<<endl;
 	cout<<"Begin= ["<<RRT.tree.front().ref.x.front()<<", "<<RRT.tree.front().ref.y.front()<<"]"<<endl;
 	cout<<"End= ["<<RRT.tree.front().ref.x.back()<<", "<<RRT.tree.front().ref.y.back()<<"]"<<endl;
-	cout<<"State= ["<<RRT.tree.front().state[0]<<", "<<RRT.tree.front().state[1]<<", "<<RRT.tree.front().state[2]<<"]"<<endl;
 
 	// Build the tree
-	Timer timer(200); int iter = 0;				
+	Timer timer(100); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
@@ -123,7 +125,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		sleep(100);
 	}
 	vector<MyReference> commit;
-	if(Tc<0.5*Tcommit){
+	if(Tc<Tcommit){
 		commit = getCommittedPath(bestPath, Tc);
 	}else{
 		ROS_INFO_STREAM("No commitment required.");
@@ -165,14 +167,24 @@ vector<MyReference> getCommittedPath(vector<Node> bestPath, double Tc){
 			path.v.push_back(it->ref.v[j]);
 			if (((Tc+Tnew)>=Tcommit)&&(path.x.size()>=3)){
 				commit.push_back(path);
-				cout<<"commited a ref of size: "<<path.x.size()<<endl;
+				// cout<<"commited a ref of size: "<<path.x.size()<<endl;
 				return commit;
 			}
 		}
 		commit.push_back(path);
-		cout<<"commited a ref of size: "<<path.x.size()<<endl;
+		// cout<<"commited a ref of size: "<<path.x.size()<<endl;
 	}
 	return commit;	
+}
+
+void predictState(vector<double>& X0, const Vehicle& veh, double t){
+	double dt = 0.01;
+	for(int i = 0; i!=int(t/dt); i++){
+		vector<double> dx = {X0[4]*cos(X0[2]), X0[4]*sin(X0[2]), (X0[4]/veh.L)*tan(X0[3])};
+		for(int i = 0; i!=dx.size(); i++){
+			X0[i] += dt*dx[i];
+		}
+	}
 }
 
 void MotionPlanner::publishPlan(const vector<MyReference>& plan){
@@ -184,7 +196,9 @@ void MotionPlanner::publishPlan(const vector<MyReference>& plan){
 		ref.y.insert(ref.y.begin(), it->y.begin(), it->y.end());
 		ref.v.insert(ref.v.begin(), it->v.begin(), it->v.end());
 		resp.refArray.push_back(ref);
-		motionplan.push_back(*it);
+		if(commit_path){
+			motionplan.push_back(*it);
+		}
 	}
 	(*pubPlan).publish(resp);
 }

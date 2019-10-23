@@ -61,13 +61,13 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Update cost estimate for path selection
 		double kappa = tan(x[3])/veh.L;
 
-		// double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
-		// double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
+		ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
+		double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
+		double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
 		// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
 		// 		(Dgoallane<Dotherlane)*w2*abs(kappa) + 		// More cost on curvature in next lane
 		// 		wc*Dgoallane;
-				// wc*abs(min(x[1],abs(x[1]-LaneWidth)));		// Cost on deviation from closest centerline
-		costS += w1*abs(kappa); 
+		costS += Dgoallane;
 
 		// Check acceleration limits
 		// Alternative: ay = r*u, ay = u^2 *tan(delta)/L
