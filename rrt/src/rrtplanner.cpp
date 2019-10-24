@@ -52,10 +52,10 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
 	for(auto it = path.begin(); it!=path.end(); ++it){
 		assert(it->x.size()>=3);
-		int ID = findClosestPoint(*it,Ppreview,1);
-		if ((ID >= (it->x.size()-3))){
-		// if ((path.size()>1)&&(ID >= (it->x.size()-3))){
+		int ID = findClosestPoint(*it,Ppreview,0);
+		if ((ID >= (it->x.size()))){
 			path.erase(it--);
+			cout<<"Removed part of plan."<<endl;
 		}
 	}
 
@@ -71,13 +71,14 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 				Simulation sim(RRT,carState,*it,veh);
 				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE, sim.costS, sim.goalReached);
 				nodeList.push_back(node);
-				Tc += sim.stateArray.size()*sim_dt;
+				Tc += (sim.stateArray.size()-1)*sim_dt;
 			}else{
 				Simulation sim(RRT,nodeList.back().state,*it,veh);		
 				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE + nodeList.back().costE, sim.costS + nodeList.back().costS, sim.goalReached);
 				nodeList.push_back(node);
-				Tc += sim.stateArray.size()*sim_dt;
+				Tc += (sim.stateArray.size()-1)*sim_dt;
 			}
+			cout<<"Tc="<<Tc<<endl;
 	}
 	// Add last node as first node to tree
 	RRT.tree.push_back(nodeList.back());

@@ -48,7 +48,9 @@ double getDistToLane(const double& x, const double& y, double S, const vector<do
 }
 
 void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReference& ref, const Vehicle& veh){
-	int w1 = 160; int w2 = 80; int wc = 2;
+	// int w1 = 160; int w2 = 80; int wc = 2;
+	int Wlane = 1;
+	int Wcurv = 4000;
 
 	for(int i = 0; i<(20/sim_dt); i++){
 		state_type x = stateArray[i];

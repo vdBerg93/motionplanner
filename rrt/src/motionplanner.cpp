@@ -63,7 +63,6 @@ vector<double> convertcarPose(const vector<double>& worldState){
 }
 
  void showPath(const vector<MyReference>& path){
-	 cout<<"---path---"<<endl;
 	 for(auto it = path.begin(); it!=path.end(); it++){
 		 cout<<"Begin = ["<<it->x.front()<<", "<<it->y.front()<<"]"<<endl;
 		 cout<<"End = = ["<<it->x.back()<<", "<<it->y.back()<<"]"<<endl;
@@ -120,10 +119,11 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 
 	// Select best path
 	vector<Node> bestPath = extractBestPath(RRT.tree,1);
-	// Select a part to commit here
+	// Stop when tree is empty
 	if(bestPath.size()==0){
 		sleep(100);
 	}
+	// Select a part to commit here
 	vector<MyReference> commit;
 	if(Tc<Tcommit){
 		commit = getCommittedPath(bestPath, Tc);
@@ -136,10 +136,13 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	}
 	transformPathCarToWorld(motionplan,worldState);
 	transformPathCarToWorld(commit,worldState);
+	// cout<<"---(S) MOTIONPLAN---"<<endl;
+	// showPath(motionplan);
 	if(commit.size()>0){
 		publishPlan(commit); // Publish committed part and add to motion plan
 	}
-	showPath(commit);
+	// cout<<"---COMMITTED---"<<endl;
+	// showPath(commit);
 
 	// FOR DEBUGGING ONLY
 	if(req.bend){
@@ -148,6 +151,8 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	}
 	// Publish best path
 	publishNodes(bestPath);
+	// cout<<"---(E) MOTIONPLAN---"<<endl;
+	// showPath(motionplan);
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
 
@@ -160,7 +165,7 @@ vector<MyReference> getCommittedPath(vector<Node> bestPath, double Tc){
 		double res = L/(it->ref.x.size()-1);
 		MyReference path;
 		path.dir = it->ref.dir;
-		for(int j = 0; j!=((*it).ref.x.size()); ++j){
+		for(int j = 1; j!=((*it).ref.x.size()); ++j){
 			Tnew += res/(it->ref.v[j]);;
 			path.x.push_back(it->ref.x[j]);
 			path.y.push_back(it->ref.y[j]);
