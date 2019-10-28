@@ -8,6 +8,7 @@ bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::g
 	for(int i = 0; i!= Obs.detections.size(); i++){
 		resp.obstacles.detections.push_back(Obs.detections[i]);
 	}
+	ROS_INFO_STREAM("Request received. Returned detections: "<<resp.obstacles.detections.size());
 	return true;
 }
 
@@ -76,8 +77,8 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
 
   	std::vector<pcl::PointIndices> cluster_indices;
   	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  	ec.setClusterTolerance (1); // 50cm
-  	ec.setMinClusterSize (4);
+  	ec.setClusterTolerance (1.5); // 50cm
+  	ec.setMinClusterSize (3);
   	ec.setMaxClusterSize (25000);
   	ec.setSearchMethod (tree);
   	ec.setInputCloud (cloud);

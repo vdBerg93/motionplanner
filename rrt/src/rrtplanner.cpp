@@ -53,7 +53,7 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 	for(auto it = path.begin(); it!=path.end(); ++it){
 		assert(it->x.size()>=3);
 		int ID = findClosestPoint(*it,Ppreview,0);
-		if ((ID >= (it->x.size()))){
+		if ((ID >= (it->x.size()-1))){
 			path.erase(it--);
 			cout<<"Removed part of plan."<<endl;
 		}
@@ -78,7 +78,6 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 				nodeList.push_back(node);
 				Tc += (sim.stateArray.size()-1)*sim_dt;
 			}
-			cout<<"Tc="<<Tc<<endl;
 	}
 	// Add last node as first node to tree
 	RRT.tree.push_back(nodeList.back());

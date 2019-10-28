@@ -87,7 +87,8 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double term_velocity = 0.1;
-		if((control.endreached)&&(abs(x[4]-ref.v.back())<term_velocity)){
+		// if((control.endreached)&&(abs(x[4]-ref.v.back())<term_velocity)){
+		if (control.endreached){
 			if(debug_sim){	ROS_INFO_STREAM("end reached");}
 			endReached = true; return;
 		}
@@ -99,9 +100,6 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		if(debug_sim){	ROS_INFO_STREAM("goal reached");}
 			goalReached = true; return;
 		}
-		// if (control.ym>10){
-		// 	sleep(1);
-		// }
 	}	
 
 };

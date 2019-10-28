@@ -59,7 +59,8 @@ void Controller::updateWaypoint(const MyReference& ref, const state_type& x){
     // Update the waypoint ID
     IDwp = findClosestPoint(ref, Ppreview, IDwp);
 
-    if (IDwp>=(ref.x.size()-2)){
+    // if (IDwp>=(ref.x.size()-2)){
+    if (IDwp>=ref.x.size()-1){
         endreached = 1;
     };
 };

@@ -96,7 +96,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	vector<double> Xend = carPose;
 	predictState(Xend,veh,0.06);
 	cout<<"Pred. state= ["<<Xend[0]<<", "<<Xend[1]<<", "<<Xend[2]<<", "<<Xend[3]<<", "<<Xend[4]<<", "<<Xend[5]<<", ]"<<endl;
-
+	// showPath(motionplan);
 	// For debugging
 	cout<<"# Obstacles= "<<det.detections.size()<<endl;
 	cout<<"WState= ["<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<", ]"<<endl;
