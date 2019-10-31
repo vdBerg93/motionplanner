@@ -15,6 +15,7 @@ void testKalman();
 int main (int argc, char** argv)
 {
 	// testKalman();
+  // std::setprecision(3);
   
 	// Initialize ROS
 	ros::init (argc, argv, "pcl_converter_node"); 	// Initialize ROS system
@@ -35,7 +36,7 @@ int main (int argc, char** argv)
 	ros::ServiceServer server = nh.advertiseService("getobstacles", &Observer::callbackService,&ObserveObject);
 
 	// Create a ROS publisher for the output point cloud
-	// pub = nh.advertise<vision_msgs::Detection2DArray> ("/pcl_converter_node/detections", 1);
+	// ros::Publisher pub = nh.advertise<car_msgs::getobstaclesResponse>("/pcl_converter_node/detections", 1);
 	// ObserveObject.pubPtr = &pub;
 	ros::Rate r(40);
 	while( ros::ok() ){

@@ -6,7 +6,7 @@
 vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det){
     vector<OBB> obstacleVector;
     for(int i = 0; i!=det.size(); i++){
-        ROS_WARN_STREAM("Update OBB class to include velocity");
+        ROS_WARN_STREAM_THROTTLE(5,"Update OBB class to include velocity");
         OBB obs(Vector2D(det[i].obb.center.x,det[i].obb.center.y),det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
         obstacleVector.push_back(obs);
     }

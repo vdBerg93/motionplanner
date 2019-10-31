@@ -145,6 +145,7 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
 		j++;
   	}
 	// pubPtr->publish(Obs);
+	updateTrackers();
 	sendMarkerMsg(Obs);
 }
 
@@ -155,9 +156,47 @@ vector2D getRearMidCord(const car_msgs::Obstacle2D& det){
 	vector2D Prear = {xr,yr};
 	return Prear;
 }
-void Observer::updateTrackers(){
-	// for(auto it = Obs.)
 
+void Observer::updateTrackers(){
+	// Generate list of tracker IDs
+	vector<int> trID;
+	for(int j = 0; j!=trackers.size(); j++){
+		trID.push_back(j);
+	}
+	cout<<"Numer of trackers "<<trID.size()<<endl;
+	// Loop through obstacles and match to closest tracker
+	for(int i = 0; i!=Obs.size(); i++){
+		vector2D Prear = getRearMidCord(Obs[i]);		// Get obstacle rear mid point (closest)
+		// Find closest tracker
+		double dmin = inf; int idmin = Obs.size()+10;
+		auto it = trID.begin();
+		for( it; it!=trID.end(); ++it){
+			double d = pow(Prear.dx-trackers[*it].xpos.back(),2) + pow(Prear.dy-trackers[*it].ypos.back(),2);
+			if (d<dmin){
+				dmin = d; idmin = *it;
+			}
+		}
+		// 1. A tracker is found. Update it and remove it from the list
+		if (idmin<Obs.size()){
+			trackers[idmin].update(Prear.dx, Prear.dy, Obs[i]);
+			trID.erase(trID.begin()+idmin);
+			cout<<"Updated a tracker"<<endl;
+		// 2. No tracker was found. Initialize a new one.
+		}else{
+			Tracker newTracker(Prear.dx,Prear.dy);
+			trackers.push_back(newTracker);
+			cout<<"Added a new tracker"<<endl;
+		}
+	}
+	// 3. Increase fail counter for all trackers that were not updated
+	for( int i = 0; i!=trID.size(); i++){
+		assert(trID.size()<=1);	// if this ever fails, update the function
+		trackers[trID[i]].countLost++;
+		auto it = trackers.begin()+trID[i];
+		trackers.erase(it);
+		cout<<"Deleted a tracker!"<<endl;
+	}
+	return;
 }
 
 void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
