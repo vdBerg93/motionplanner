@@ -1,2 +1,3 @@
 ---
-vision_msgs/Detection2DArray obstacles
+#vision_msgs/Detection2DArray obstacles
+Obstacle2D[] obstacles

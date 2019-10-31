@@ -18,6 +18,7 @@ add_message_files(
   MotionRequest.msg
   MotionResponse.msg
   MotionPlan.msg
+  LaneDet.msg
 )
 
 add_service_files(

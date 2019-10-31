@@ -36,8 +36,9 @@ void MyRRT::addInitialNode(const vector<double>& state){
 	tree.push_back(initialNode);
 }
 
-double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, const vector<double>& carState){
-	double Tc {0};
+double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
+	carState.push_back(0); carState.push_back(0); assert(carState.size()==8);
+	double Tc = 0;
 	// If committed path is empty, initialize tree with reference at (Dla,0)
 	if (path.size()==0){
 		RRT.addInitialNode(carState);
@@ -46,48 +47,45 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path,
 	}
 
 	// See which parts of path have been passed and erase these from the pathlist
-	// 1. Loop through reference segments
-	// 2. Find point closest to preview point
-	// 3. Reference has been passed if ID is at end of reference -> erase
+	// 1. Loop through the segments
+	// 2. erase everything behind the car
 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
 	for(auto it = path.begin(); it!=path.end(); ++it){
-		assert(it->x.size()>=3);
-		int ID = findClosestPoint(*it,Ppreview,0);
-		if ((ID >= (it->x.size()-1))){
+		if ((it->tra.back()[0])<0){
 			path.erase(it--);
 			cout<<"Removed part of plan."<<endl;
+		}else{
+			for(auto it2 = it->tra.begin(); it2!=it->tra.end(); ++it2){
+				if (((*it2)[0])<0){
+					it->tra.erase(it2--);
+				}
+			}
 		}
 	}
 
+	// If this assertion fails, the path committment is not configured properly
 	if(path.size()==0){
-		ROS_ERROR_STREAM("All nodes were erased.");
+		ROS_ERROR_STREAM("All nodes were erased. Committed time not configured properly!");
+		assert(path.size()!=0);
 	}
-	assert(path.size()!=0);
-	
-	// For the rest: propagate states to obtain nodes
-	vector<Node> nodeList;
+
+	// Initialize tree
+	Node node(path.back().tra.back(), -1, path.back().ref, path.back().tra,0,0,0);
+	RRT.tree.push_back(node);
+	cout<<"Initialized tree with last committed reference."<<endl;
+
+	// Calculate total committed time
 	for(auto it = path.begin(); it!=path.end(); ++it){
-			if(nodeList.size()==0){
-				Simulation sim(RRT,carState,*it,veh);
-				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE, sim.costS, sim.goalReached);
-				nodeList.push_back(node);
-				Tc += (sim.stateArray.size()-1)*sim_dt;
-			}else{
-				Simulation sim(RRT,nodeList.back().state,*it,veh);		
-				Node node(sim.stateArray.back(), -1, *it,sim.stateArray, sim.costE + nodeList.back().costE, sim.costS + nodeList.back().costS, sim.goalReached);
-				nodeList.push_back(node);
-				Tc += (sim.stateArray.size()-1)*sim_dt;
-			}
+		for(int j = 1; j<it->tra.size(); j++){
+			Tc += sim_dt;
+		}
 	}
-	// Add last node as first node to tree
-	RRT.tree.push_back(nodeList.back());
-	ROS_INFO_STREAM("Initialized tree with last committed reference.");
 	return Tc;
 }
 
 
 // Perform a tree expansion
-void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vision_msgs::Detection2DArray& det, const vector<double>& Cxy){;
+void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const vector<double>& Cxy){;
 	double Lmax = RRT.goalPose[0];// RRT.goalPose[0]
 	geometry_msgs::Point sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
 	// ROS_WARN_STREAM_ONCE("Sampledomain:"<<double(0)<<", "<<Lmax<<"-"<<RRT.laneShifts[0]<<", "<<RRT.laneShifts[1]);

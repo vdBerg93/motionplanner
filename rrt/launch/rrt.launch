@@ -14,7 +14,6 @@
 		pkg="rrt"
 		type="rrt_node"
 		name="rrt_node"
-		respawn="false"
 		output="screen"
 		required="true"
 	/>

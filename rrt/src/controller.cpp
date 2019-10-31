@@ -103,9 +103,9 @@ int findClosestPoint(const MyReference& ref, const geometry_msgs::Point& point, 
             idmin = i;
         }
         // else the points are increasing in distance (linear reference)
-        else{
-            return idmin;
-        }
+        // else{
+        //     return idmin;
+        // }
     }
     return idmin;
 };

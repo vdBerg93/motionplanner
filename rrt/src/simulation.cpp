@@ -35,10 +35,12 @@ void IntegrateEuler(ControlCommand& ctrl, state_type& x, state_type& dx, double&
 
 Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReference& ref, const Vehicle& veh){
 	costE = costS = goalReached = endReached = 0;
-	stateArray.push_back(state);
-	Controller control(ref,state);
+	stateArray.push_back(state); 				// Push initial state into statearray
+	Controller control(ref,state);				// Initialize controller
+	stateArray.back()[6] = 0; 					// Add time to states
+	stateArray.back()[7] = control.IDwp;		// Add waypoint ID in stateArray
 	generateVelocityProfile(ref,state[4],control.IDwp,vmax,vgoal);
-	propagate(RRT, control,ref,veh);
+	propagate(RRT, control,ref,veh);			// Predict vehicle trajectory
 };
 
 double getDistToLane(const double& x, const double& y, double S, const vector<double>& Cxy){
@@ -51,17 +53,22 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 	// int w1 = 160; int w2 = 80; int wc = 2;
 	int Wlane = 1;
 	int Wcurv = 4000;
-
+	if(draw_states){
+		cout<<"-------------------------------------------------------------"<<endl;
+		cout<<"reference size= "<<ref.x.size()<<endl;
+		cout<<"[ "<<ref.x.front()<<" -> "<<ref.x.back()<<" ]"<<endl;
+		cout<<"[ "<<ref.y.front()<<" -> "<<ref.y.back()<<" ]"<<endl;
+		cout<<"-------------------------------------------------------------"<<endl;
+	}
 	for(int i = 0; i<(20/sim_dt); i++){
-		state_type x = stateArray[i];
-		ControlCommand ctrlCmd = control.getControls(ref,veh,x);
-		state_type dx = VehicleODE(ctrlCmd, x, veh);
-		IntegrateEuler(ctrlCmd, x, dx, sim_dt, veh);
-		stateArray.push_back(x);
-		// Update cost estimate for exploration
-		costE = costE + x[4]*sim_dt;
-		// Update cost estimate for path selection
-		double kappa = tan(x[3])/veh.L;
+		state_type x = stateArray[i];								// Set x as last vehicle state
+		ControlCommand ctrlCmd = control.getControls(ref,veh,x);	// Get controls for state
+		state_type dx = VehicleODE(ctrlCmd, x, veh);				// Get vehicle state transition
+		IntegrateEuler(ctrlCmd, x, dx, sim_dt, veh);				// Get new state
+		x[7] = control.IDwp;									// Add waypoint ID to vehicle state
+		stateArray.push_back(x);									// Add state to statearray
+		costE = costE + x[4]*sim_dt; 								// Update cost estimate for exploration
+		double kappa = tan(x[3])/veh.L;								// Calculate vehicle path curvature
 
 		ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
 		double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
@@ -75,14 +82,14 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Alternative: ay = r*u, ay = u^2 *tan(delta)/L
 		double ay = abs(x[4]*dx[2]);
 		if ( ay> 3){
-			if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3];);}
+			if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3]);}
 			// endReached = false; return;
 		}
 		if (draw_states){
 			// Print the states
 			cout<<"x="<<stateArray.back()[0]<<",\ty="<<stateArray.back()[1]<<",\thead="<<stateArray.back()[2]<<",\td="<<stateArray.back()[3]<<",\tv="<<stateArray.back()[4]<<",\ta="<<stateArray.back()[5]
 			// Print the control variables
-			<<",\tt="<<stateArray.back()[6]<<",\t\t\tIDwp="<<control.IDwp<<", \tWpx="<<control.Ppreview.x<<", \t WPy="<<control.Ppreview.y<<",\tvcmd="<<ref.v[control.IDwp]<<",\tym="<<control.ym<<endl;
+			<<",\tt="<<stateArray.back()[6]<<",\tIDwp="<<stateArray.back()[7]<<", \t\t\tWpx="<<control.Ppreview.x<<", \t WPy="<<control.Ppreview.y<<",\tvcmd="<<ref.v[control.IDwp]<<",\tym="<<control.ym<<endl;
 		}
 
 		// Stop simulation when end of reference is reached and velocity < terminate velocity

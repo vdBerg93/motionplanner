@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
 					# geometry_msgs
 					pcl_msgs
 					pcl_conversions
+					visualization_msgs
 					pcl_ros 
 					#message_generation
 					#${msg_dependencies}

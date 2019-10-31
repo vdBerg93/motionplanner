@@ -34,19 +34,12 @@
 #include <pcl/io/pcd_io.h>
 #include <iostream>
 
-const double pi = M_PI;
-const double inf = std::numeric_limits<double>::infinity();
+#include <car_msgs/getobstacles.h>
+#include <car_msgs/LaneDet.h>
+#include <car_msgs/Obstacle2D.h>
+#include <vision_msgs/BoundingBox2D.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
-struct vector2D{
-    double dx, dy;
-};
-
-struct OBB{
-    double theta, size_x, size_y, area;
-};
-
-double myDot(vector2D a, vector2D b){
-    return a.dx*b.dx + a.dy*b.dy;
-};
-
-void findBestOBB(const pcl::PointCloud<pcl::PointXYZ> &cloud_cluster, vision_msgs::Detection2D &det);

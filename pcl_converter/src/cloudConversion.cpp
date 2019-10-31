@@ -1,15 +1,41 @@
+//#### Point cloud conversion function ########################
+// 1. The message is converted to pcl format
+// 2. The point cloud is filterd for the ground
+// 3. The outliers are taken
+// 4. Clusters are taken from the outliers.
+// 5. The size and centerpoint from the clusters are taken
+// 6. The size and coordinates are sent 
+#include <tracker.h>
+#include "obb.cpp"
+
 struct Observer{
-	vision_msgs::Detection2DArray Obs;
+	// Obstacle data & Trackers
+	vector<double> laneCxy;
+	vector<car_msgs::Obstacle2D> Obs;
+	vector<Tracker> trackers;
+	void updateTrackers();
+	// Callback functions
+	void callbackLane(const car_msgs::LaneDet& msg);
 	void callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input);
     bool callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp);
+	// Rviz publishing
+	void sendMarkerMsg(const vector<car_msgs::Obstacle2D>& det);
+	// Publishers
+	ros::Publisher* pubPtr;
+	ros::Publisher* pubRviz;
 };
 
 bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp){
-	for(int i = 0; i!= Obs.detections.size(); i++){
-		resp.obstacles.detections.push_back(Obs.detections[i]);
+	for(auto it = Obs.begin(); it!=Obs.end(); ++it){
+		resp.obstacles.push_back(*it);
 	}
-	ROS_INFO_STREAM("Request received. Returned detections: "<<resp.obstacles.detections.size());
+	ROS_INFO_STREAM("Request received. Returned detections: "<<resp.obstacles.size());
 	return true;
+}
+
+void Observer::callbackLane(const car_msgs::LaneDet& msg){
+	laneCxy = msg.coef;
+	return;
 }
 
 void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input)
@@ -17,10 +43,8 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
   	//#######################################################################
   	//#### Read data and perform segmentation and ground plane removal 
   	//#######################################################################
-
 	// 1. CLEAR DETECTIONS
-	Obs.detections.clear();
-
+	Obs.clear();
 
 	// Convert ROS message to pcl format 
   	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
@@ -48,7 +72,7 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
     // 	seg.segment (*inliers, *coefficients);
     // 	if (inliers->indices.size () == 0)
     // 	{
-    //   		std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
+    //   		cout << "Could not estimate a planar model for the given dataset." << endl;
     // 	}
 
     // 	// Extract the planar inliers from the input cloud
@@ -59,7 +83,7 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
 
     // 	// Get the points associated with the planar surface
     // 	extract.filter (*cloud_plane);
-    // 	std::cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << std::endl;
+    // 	cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << endl;
 
     // 	// Remove the planar inliers, extract the rest, the ground is filterd out of the point cloud
     // 	extract.setNegative (true);
@@ -75,100 +99,109 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
   	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
   	tree->setInputCloud (cloud);
 
-  	std::vector<pcl::PointIndices> cluster_indices;
+  	vector<pcl::PointIndices> cluster_indices;
   	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  	ec.setClusterTolerance (1.5); // 50cm
+  	ec.setClusterTolerance (10); // 50cm
   	ec.setMinClusterSize (3);
   	ec.setMaxClusterSize (25000);
   	ec.setSearchMethod (tree);
   	ec.setInputCloud (cloud);
   	ec.extract (cluster_indices);
 
-	// Prepare  2D message
-	// vision_msgs::Detection2DArray msgOut;
-  	vision_msgs::Detection2D det;
-  	
   	// msgOut.header = input->header;
   	Eigen::Vector4f centroid;
 
 	// Dividing the clusters
   	int j = 0;
-  	for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+  	for (vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   	{
     	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    	for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+    	for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
       	cloud_cluster->points.push_back (cloud->points[*pit]); //*
     	cloud_cluster->width = cloud_cluster->points.size ();
     	cloud_cluster->height = 1;
     	cloud_cluster->is_dense = true;
 
-	// Extract centroid and min/max
+		// Extract centroid and min/max
     	pcl::compute3DCentroid (*cloud_cluster, centroid);
     	pcl::PointXYZ min_p, max_p;
     	pcl::getMinMax3D(*cloud_cluster, min_p, max_p);
 
-	// Prepare info for 2D message
-	det.bbox.center.x = centroid[0];
-	det.bbox.center.y = centroid[1];
-	findBestOBB(*cloud_cluster, det);
+		// Setup message data
+		car_msgs::Obstacle2D obs;
 
-	det.header = input->header;
-	// msgOut.detections.push_back(det);
-	// Add detection to log for service call
-	Obs.detections.push_back(det);
-	
-	std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-	std::stringstream ss;
-	ss << "cloud_cluster_" << j << ".pcd";
-	j++;
-  }
-	// pub.publish(msgOut); 	// publish messages
+		// Prepare info for 2D message
+		obs.obb.center.x = centroid[0];
+		obs.obb.center.y = centroid[1];
+		// findBestOBB(*cloud_cluster, det);
+		getOBB(*cloud_cluster,obs,laneCxy);
+
+		// Add detection to log for service call
+		Obs.push_back(obs);
+		
+		cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
+		stringstream ss;
+		ss << "cloud_cluster_" << j << ".pcd";
+		j++;
+  	}
+	// pubPtr->publish(Obs);
+	sendMarkerMsg(Obs);
 }
 
-void findBestOBB(const pcl::PointCloud<pcl::PointXYZ> &cloud_cluster, vision_msgs::Detection2D &det){
-	// This function tries to approximate the optimal Oriented Bounding Box for the given cloud cluster.
-	// It constructs a bounding box and rotates it between 0-90 degrees, while logging its area.
-	// The bounding box with smallest volume is selected as the best OBB and it is put in the detection message.
-	std::vector<OBB> obbVec;
-	// Defien bounding box center position
-	double c_x = det.bbox.center.x;
-	double c_y = det.bbox.center.y;
-	// Try multiple Orientations for the Bounding Box
-	for(double theta = 0; theta<(pi/2); theta +=(pi/16)){
-		double dxMax{0}, dyMax{0};
-		// Project all cloud points onto the rotated axes
-		for(int i = 0; i!=cloud_cluster.points.size(); i++)
-		{
-			pcl::PointXYZ pclPoint = cloud_cluster.points[i];
-			vector2D A = {pclPoint.x-c_x,pclPoint.y-c_y};		// Vector A from c.m. to point
-			vector2D vecXaxis = {cos(theta),-sin(theta)}; 		// normal vector rotated x-axis
-			vector2D vecYaxis = {sin(theta), cos(theta)};		// normal vector rotated y-axis
-			double distX = myDot(A,vecXaxis);					// project A on x-axis
-			double distY = myDot(A,vecYaxis); 					// project A on y-axis
-			if(distX>dxMax){
-				dxMax = distX;	// If distance is larger, update size
-			}
-			if(distY>dyMax){
-				dyMax = distY;	// If distance is larger, update size								
-			}
+vector2D getRearMidCord(const car_msgs::Obstacle2D& det){
+	vector2D vecYaxis = {-sin(det.obb.center.theta), cos(det.obb.center.theta)};		// normal vector rotated y-axis
+	double xr = det.obb.center.x - vecYaxis.dx*det.obb.size_y/2;						// Get x coordinate
+	double yr = det.obb.center.y - vecYaxis.dy*det.obb.size_y/2;						// Get y coordinate
+	vector2D Prear = {xr,yr};
+	return Prear;
+}
+void Observer::updateTrackers(){
+	// for(auto it = Obs.)
+
+}
+
+void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
+	visualization_msgs::MarkerArray msg;
+	// visualization_msgs::Marker clearMsg;
+	// // Initialize marker message
+	// clearMsg.header.frame_id = "map";
+	// clearMsg.header.stamp = ros::Time::now();
+	// clearMsg.ns = "obstacles";
+	// clearMsg.action = visualization_msgs::Marker::DELETEALL;
+	// msg.markers.push_back(clearMsg);
+
+	for(int j = 0; j!=obsArray.size(); j++){
+		// Get vertices
+		Vertices vertices(obsArray[j]);
+		visualization_msgs::Marker marker;
+		// Initialize marker message
+		marker.header.frame_id = "map";
+		marker.header.stamp = ros::Time::now();
+		marker.ns = "obstacles";
+		marker.action = visualization_msgs::Marker::ADD;
+		marker.pose.orientation.w = 1.0;
+		marker.id = j;
+		marker.type = visualization_msgs::Marker::LINE_STRIP;
+		marker.scale.x = 1;	// msg/LINE_LIST markers use only the x component of scale, for the line width
+
+		// Line strip is red
+		marker.color.r = 1.0;
+		marker.color.a = 1.0;
+		marker.lifetime = ros::Duration(10);
+		geometry_msgs::Point p;// int i = 0;
+		p.x = vertices.x[3];
+		p.y = vertices.y[3];
+		p.z = 0;
+		marker.points.push_back(p);
+		for(int i = 0; i<=3; i++){
+			p.x = vertices.x[i];
+			p.y = vertices.y[i];
+			p.z = 0;
+			marker.points.push_back(p);
+			marker.points.push_back(p);
 		}
-		double area = dxMax*dyMax;
-		//cout<<"theta="<<theta<<" sz_x="<<dxMax<<" sx_y="<<dyMax<<" area="<<area<<endl;
-		// Log the data for best box selection
-		OBB box = {theta, dxMax, dyMax, area};
-		obbVec.push_back(box);
+		msg.markers.push_back(marker);
 	}
-	// Loop through all boxes and select the smallest one
-	int best; double Amin = inf;
-	for(int i = 0; i!=obbVec.size(); i++){
-		if(obbVec[i].area<Amin){
-			Amin = obbVec[i].area;
-			best = i;
-		}
-	}
-	// Insert best box into detection message
-	det.bbox.center.theta = obbVec[best].theta;
-	det.bbox.size_x = obbVec[best].size_x;
-	det.bbox.size_y = obbVec[best].size_y;
-	return;
-};
+	pubRviz->publish(msg);
+	cout<<"! Published markers"<<endl;
+}

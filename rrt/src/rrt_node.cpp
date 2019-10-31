@@ -19,6 +19,7 @@ double Tcommit {0.4};
 #include <ctime>
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
 #include <vision_msgs/Detection2DArray.h>
@@ -28,8 +29,14 @@ double sim_dt;
 double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
 double ref_res, ref_int, ref_mindist, vmax, vgoal;
 
-// ros::Publisher* ptrPub;
-// ros::ServiceClient* ptrSrv;
+// Include messages
+#include "car_msgs/getobstacles.h"
+#include "car_msgs/MotionRequest.h"
+#include "car_msgs/MotionResponse.h"
+#include "car_msgs/State.h"
+#include "car_msgs/Trajectory.h"
+#include "car_msgs/MotionPlan.h"
+#include "car_msgs/Obstacle2D.h"
 
 // Include header files
 #include "rrt/functions.h"
@@ -39,14 +46,8 @@ double ref_res, ref_int, ref_mindist, vmax, vgoal;
 #include "rrt/collision.h"
 #include "rrt/controller.h"
 #include "rrt/datatypes.h"
+#include "rrt/motionplanner.h"
 #include "car_msgs/Reference.h"
-
-#include "car_msgs/getobstacles.h"
-#include "car_msgs/MotionRequest.h"
-#include "car_msgs/MotionResponse.h"
-#include "car_msgs/State.h"
-#include "car_msgs/Trajectory.h"
-#include "car_msgs/MotionPlan.h"
  
 // Include classes
 #include "reference.cpp"
@@ -55,6 +56,7 @@ double ref_res, ref_int, ref_mindist, vmax, vgoal;
 #include "simulation.cpp"
 #include "collisioncheck.cpp"
 #include "testers.cpp"
+#include "motionplanner.cpp"
 
 /* #############################
 	CRITICAL TODO'S
@@ -62,7 +64,7 @@ double ref_res, ref_int, ref_mindist, vmax, vgoal;
 // 1. Check cost function and node sorting heuristics
 
 
-#include "motionplanner.cpp"
+
 // #include "matlabgen/transformCarToRoad.h"
 // #include "matlabgen/transformCarToRoad.cpp"
 
@@ -97,10 +99,10 @@ int main( int argc, char** argv ){
 	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
 
 	// Publisher for best path
-	ros::Publisher pubResp = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",100);
-	motionPlanner.respPtr = &pubResp;
+	ros::Publisher pubBest = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",100);
+	motionPlanner.pubBest = &pubBest;
 	// Publisher for committed path
-	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionPlan>("/motionplanner/response",100);
+	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",100);
 	motionPlanner.pubPlan = &pubPlan;
 
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
