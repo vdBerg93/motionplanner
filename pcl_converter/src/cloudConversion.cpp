@@ -14,6 +14,7 @@ struct Observer{
 	vector<car_msgs::Obstacle2D> Obs;
 	vector<Tracker> trackers;
 	void updateTrackers();
+	void updateTrackersKF();
 	// Callback functions
 	void callbackLane(const car_msgs::LaneDet& msg);
 	void callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input);
@@ -145,7 +146,8 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
 		j++;
   	}
 	// pubPtr->publish(Obs);
-	updateTrackers();
+	// updateTrackers();
+	updateTrackersKF();
 	sendMarkerMsg(Obs);
 }
 
@@ -157,35 +159,51 @@ vector2D getRearMidCord(const car_msgs::Obstacle2D& det){
 	return Prear;
 }
 
-void Observer::updateTrackers(){
-	// Generate list of tracker IDs
+void Observer::updateTrackersKF(){
+// Generate list of tracker IDs
 	vector<int> trID;
 	for(int j = 0; j!=trackers.size(); j++){
 		trID.push_back(j);
 	}
-	cout<<"Numer of trackers "<<trID.size()<<endl;
+	// cout<<"Numer of trackers "<<trID.size()<<endl;
 	// Loop through obstacles and match to closest tracker
 	for(int i = 0; i!=Obs.size(); i++){
 		vector2D Prear = getRearMidCord(Obs[i]);		// Get obstacle rear mid point (closest)
 		// Find closest tracker
-		double dmin = inf; int idmin = Obs.size()+10;
-		auto it = trID.begin();
-		for( it; it!=trID.end(); ++it){
-			double d = pow(Prear.dx-trackers[*it].xpos.back(),2) + pow(Prear.dy-trackers[*it].ypos.back(),2);
+		double dmin = inf; int idmin = trackers.size()+10;
+		for(int j = 0; j!=trID.size(); j++){
+			Eigen::VectorXd X = trackers[trID[j]].kf.state();
+			double d = pow(Prear.dx-X(0),2) + pow(Prear.dy-X(1),2);
 			if (d<dmin){
-				dmin = d; idmin = *it;
+				dmin = d; idmin = j;
 			}
 		}
+		if (DEBUG){
+			cout<<"--- DEBUG INFO ---"<<endl;
+			cout<<"trackerlist size "<<trID.size()<<endl;
+			cout<<"no# obstacles ="<<Obs.size()<<endl;
+			cout<<"now processing obstacle id "<<i<<endl;
+			cout<<"------------------"<<endl;
+		}
+
+		// cout<<"Looped through trackers."<<endl;
 		// 1. A tracker is found. Update it and remove it from the list
-		if (idmin<Obs.size()){
-			trackers[idmin].update(Prear.dx, Prear.dy, Obs[i]);
-			trID.erase(trID.begin()+idmin);
-			cout<<"Updated a tracker"<<endl;
+		if (idmin<trackers.size()){
+			// assert(idmin<trackers.size());
+			trackers[trID[idmin]].update(Prear.dx, Prear.dy, Obs[i]);
+			if (DEBUG) {
+				cout<<"trackeridvecsize="<<trID.size()<<endl;
+				cout<<"idmin ="<<idmin<<endl;
+			}
+			auto it = trID.begin()+idmin;
+			trID.erase(it);
 		// 2. No tracker was found. Initialize a new one.
 		}else{
 			Tracker newTracker(Prear.dx,Prear.dy);
 			trackers.push_back(newTracker);
-			cout<<"Added a new tracker"<<endl;
+			if (DEBUG){
+				cout<<"Added a new tracker"<<endl;
+			}
 		}
 	}
 	// 3. Increase fail counter for all trackers that were not updated
@@ -194,21 +212,16 @@ void Observer::updateTrackers(){
 		trackers[trID[i]].countLost++;
 		auto it = trackers.begin()+trID[i];
 		trackers.erase(it);
-		cout<<"Deleted a tracker!"<<endl;
+		if (DEBUG){	cout<<"Deleted a tracker!"<<endl;	}
 	}
 	return;
 }
 
+
 void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 	visualization_msgs::MarkerArray msg;
-	// visualization_msgs::Marker clearMsg;
-	// // Initialize marker message
-	// clearMsg.header.frame_id = "map";
-	// clearMsg.header.stamp = ros::Time::now();
-	// clearMsg.ns = "obstacles";
-	// clearMsg.action = visualization_msgs::Marker::DELETEALL;
-	// msg.markers.push_back(clearMsg);
 
+	// GENERATE OBB BOX MARKER LINES
 	for(int j = 0; j!=obsArray.size(); j++){
 		// Get vertices
 		Vertices vertices(obsArray[j]);
@@ -237,10 +250,83 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 			p.y = vertices.y[i];
 			p.z = 0;
 			marker.points.push_back(p);
-			marker.points.push_back(p);
 		}
+		msg.markers.push_back(marker);
+	}
+	// GENERATE MOVEMENT VECTOR
+		for(int j = 0; j!=obsArray.size(); j++){
+		// Get vertices
+		Vertices vertices(obsArray[j]);
+		visualization_msgs::Marker marker;
+		// Initialize marker message
+		marker.header.frame_id = "map";
+		marker.header.stamp = ros::Time::now();
+		marker.ns = "obstacles";
+		marker.action = visualization_msgs::Marker::ADD;
+		// marker.pose.orientation.w = 1.0;
+		marker.id = j+obsArray.size();
+		marker.type = visualization_msgs::Marker::ARROW;
+		marker.scale.x = 1;
+		marker.scale.y = 2;
+
+		// Line strip is red
+		marker.color.r = 1.0;
+		marker.color.a = 1.0;
+		marker.lifetime = ros::Duration(10);
+
+		// Define pionts
+		marker.points.resize(2);
+		marker.points[0].x = obsArray[j].obb.center.x;
+		marker.points[0].y = obsArray[j].obb.center.y;
+		marker.points[0].z = 0;
+		ROS_WARN_ONCE("IN PCL_CONV PUBLISH: velocity of ego vehicle is fixed");
+		marker.points[1].x = obsArray[j].obb.center.x + 4*(obsArray[j].vel.linear.x+cos(obsArray[j].obb.center.theta)*33); // Add EGO velocity 33m/s
+		marker.points[1].y = obsArray[j].obb.center.y + 4*(obsArray[j].vel.linear.y+sin(obsArray[j].obb.center.theta)*33);
+		marker.points[1].z = 0;
 		msg.markers.push_back(marker);
 	}
 	pubRviz->publish(msg);
 	cout<<"! Published markers"<<endl;
 }
+
+// void Observer::updateTrackers(){
+// 	// Generate list of tracker IDs
+// 	vector<int> trID;
+// 	for(int j = 0; j!=trackers.size(); j++){
+// 		trID.push_back(j);
+// 	}
+// 	cout<<"Numer of trackers "<<trID.size()<<endl;
+// 	// Loop through obstacles and match to closest tracker
+// 	for(int i = 0; i!=Obs.size(); i++){
+// 		vector2D Prear = getRearMidCord(Obs[i]);		// Get obstacle rear mid point (closest)
+// 		// Find closest tracker
+// 		double dmin = inf; int idmin = Obs.size()+10;
+// 		auto it = trID.begin();
+// 		for( it; it!=trID.end(); ++it){
+// 			double d = pow(Prear.dx-trackers[*it].xpos.back(),2) + pow(Prear.dy-trackers[*it].ypos.back(),2);
+// 			if (d<dmin){
+// 				dmin = d; idmin = *it;
+// 			}
+// 		}
+// 		// 1. A tracker is found. Update it and remove it from the list
+// 		if (idmin<Obs.size()){
+// 			trackers[idmin].update(Prear.dx, Prear.dy, Obs[i]);
+// 			trID.erase(trID.begin()+idmin);
+// 			cout<<"Updated a tracker"<<endl;
+// 		// 2. No tracker was found. Initialize a new one.
+// 		}else{
+// 			Tracker newTracker(Prear.dx,Prear.dy);
+// 			trackers.push_back(newTracker);
+// 			cout<<"Added a new tracker"<<endl;
+// 		}
+// 	}
+// 	// 3. Increase fail counter for all trackers that were not updated
+// 	for( int i = 0; i!=trID.size(); i++){
+// 		assert(trID.size()<=1);	// if this ever fails, update the function
+// 		trackers[trID[i]].countLost++;
+// 		auto it = trackers.begin()+trID[i];
+// 		trackers.erase(it);
+// 		cout<<"Deleted a tracker!"<<endl;
+// 	}
+// 	return;
+// }

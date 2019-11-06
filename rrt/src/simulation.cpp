@@ -37,7 +37,7 @@ Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReferenc
 	costE = costS = goalReached = endReached = 0;
 	stateArray.push_back(state); 				// Push initial state into statearray
 	Controller control(ref,state);				// Initialize controller
-	stateArray.back()[6] = 0; 					// Add time to states
+	// stateArray.back()[6] = 0; 					// Add time to states
 	stateArray.back()[7] = control.IDwp;		// Add waypoint ID in stateArray
 	generateVelocityProfile(ref,state[4],control.IDwp,vmax,vgoal);
 	propagate(RRT, control,ref,veh);			// Predict vehicle trajectory
@@ -81,9 +81,10 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Check acceleration limits
 		// Alternative: ay = r*u, ay = u^2 *tan(delta)/L
 		double ay = abs(x[4]*dx[2]);
-		if ( ay> 3){
+		ROS_WARN_STREAM_THROTTLE(2,"Max road lateral acceleration: "<<ay_road_max);
+		if ( ay + ay_road_max> 3){
 			if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3]);}
-			// endReached = false; return;
+			endReached = false; return;
 		}
 		if (draw_states){
 			// Print the states

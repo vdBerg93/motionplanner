@@ -28,6 +28,7 @@ double Tcommit {0.4};
 double sim_dt;
 double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
 double ref_res, ref_int, ref_mindist, vmax, vgoal;
+double ay_road_max;
 
 // Include messages
 #include "car_msgs/getobstacles.h"

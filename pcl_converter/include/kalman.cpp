@@ -26,61 +26,44 @@ KalmanFilter::KalmanFilter(
 }
 
 KalmanFilter::KalmanFilter() {
-  // int n = 4; // Number of states
-  // int m = 2; // Number of measurements
+  int n = 4; // Number of states
+  int m = 2; // Number of measurements
 
-  // double dt = 0.05; // Time step
-  // // Define system matrices
-  // Eigen::MatrixXd Ain(n, n); // System dynamics matrix
-  // Eigen::MatrixXd Cin(m, n); // Output matrix
-  // Eigen::MatrixXd Qin(n, n); // Process noise covariance
-  // Eigen::MatrixXd Rin(m, m); // Measurement noise covariance
-  // Eigen::MatrixXd Pin(n, n); // Estimate error covariance
-  // // Discrete LTI projectile motion, measuring position only
-  // A << 1, 0, dt, 0, 0, 1, 0, dt, 0, 0, 1, 0, 0, 0, 0, 1;
-  // C << 1, 0, 0, 0, 0, 1, 0, 0;
-  // // Covariance matrices
-  // double nPos = 1e-1;  // variance of spatial process noise
-  // double nVel = 1e-2;  // variance of velocity process noise
-  // double nMeas = 3;         // variance of measurement noise for z_x and z_y
-  // Q << nPos, 0, 0, 0, 0, nPos, 0, 0, 0, 0, nVel, 0, 0, 0, 0, nVel;
-  // R << nMeas, 0, 0, nMeas;
-  // P << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
-  // // Show matrices
-  // std::cout << "A: \n" << A << std::endl;
-  // std::cout << "C: \n" << C << std::endl;
-  // std::cout << "Q: \n" << Q << std::endl;
-  // std::cout << "R: \n" << R << std::endl;
-  // std::cout << "P: \n" << P << std::endl;
-    int n = 3; // Number of states
-  int m = 1; // Number of measurements
-
-  double dt = 1.0/30; // Time step
-
+  double dt = 0.05; // Time step
+  // Define system matrices
   Eigen::MatrixXd Ain(n, n); // System dynamics matrix
   Eigen::MatrixXd Cin(m, n); // Output matrix
   Eigen::MatrixXd Qin(n, n); // Process noise covariance
   Eigen::MatrixXd Rin(m, m); // Measurement noise covariance
   Eigen::MatrixXd Pin(n, n); // Estimate error covariance
-
   // Discrete LTI projectile motion, measuring position only
-  Ain << 1, dt, 0, 0, 1, dt, 0, 0, 1;
-  Cin << 1, 0, 0;
-
-  // Reasonable covariance matrices
-  Qin << .05, .05, .0, .05, .05, .0, .0, .0, .0;
-  Rin << 5;
-  Pin << .1, .1, .1, .1, 10000, 10, .1, 10, 100;
-
+  Ain << 1, 0, dt, 0, 0, 1, 0, dt, 0, 0, 1, 0, 0, 0, 0, 1;
+  Cin << 1, 0, 0, 0, 0, 1, 0, 0;
+  // Covariance matrices
+  double nPos = 1e-1;  // variance of spatial process noise
+  double nVel = 1e-2;  // variance of velocity process noise
+  double nMeas = 0.5;  // variance of measurement noise for z_x and z_y
+  Qin << nPos, 0, 0, 0, 0, nPos, 0, 0, 0, 0, nVel, 0, 0, 0, 0, nVel;
+  Rin << nMeas, 0, 0, nMeas;
+  Pin << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1;
   A = Ain; C = Cin; Q = Qin; R = Rin; P0 = Pin;
+
+  // Initialize other parameters
   m = C.rows();
   n = A.rows();
   initialized = false;
   Eigen::MatrixXd eigenM(n,n);
   Eigen::VectorXd V(n);
   I = eigenM; x_hat = V; x_hat_new = V;
-
   I.setIdentity();
+
+    // Show matrices
+  std::cout << "A: \n" << A << std::endl;
+  std::cout << "C: \n" << C << std::endl;
+  std::cout << "Q: \n" << Q << std::endl;
+  std::cout << "R: \n" << R << std::endl;
+  std::cout << "P0: \n" << P0 << std::endl;
+  std::cout<< "I: \n" << I << std::endl;
 }
 
 void KalmanFilter::init(double t0, const Eigen::VectorXd& x0) {

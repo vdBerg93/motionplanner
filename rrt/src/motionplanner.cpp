@@ -46,13 +46,11 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
+	ay_road_max = abs(pow(worldState[4],2)*(2*req.Cxy[0]));
 
 	// Get the array of committed motion plans
 	transformPathWorldToCar(motionplan,worldState);
 	// If road parametrization is available, convert motion spec to straightened scenario
-
-	cout<<"LANE:"<<endl;
-	cout<<"Cxy=["<<req.Cxy[0]<<", "<<req.Cxy[1]<<", "<<req.Cxy[2]<<"]"<<endl;
 
 	if(req.bend){
 		transformPathCarToRoad(motionplan,req.Cxy,req.Cxs, veh);
@@ -72,12 +70,12 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// cout<<"Pred. state= ["<<Xend[0]<<", "<<Xend[1]<<", "<<Xend[2]<<", "<<Xend[3]<<", "<<Xend[4]<<", "<<Xend[5]<<", ]"<<endl;
 	// showPath(motionplan);
 	// For debugging
-	cout<<"# Obstacles= "<<det.size()<<endl;
-	cout<<"WState= ["<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<", ]"<<endl;
+	// cout<<"# Obstacles= "<<det.size()<<endl;
+	// cout<<"WState= ["<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<", ]"<<endl;
 	
 	// Initialize RRT planner
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy);	
-	cout<<"Created tree object"<<endl;
+	// cout<<"Created tree object"<<endl;
 	double Tp = initializeTree(RRT, veh, motionplan, Xend);
 	cout<<"Committed path time= "<<Tp<<endl;
 	// showNode(RRT.tree.front());
@@ -188,12 +186,10 @@ vector<Path> getCommittedPath(vector<Node> bestPath, double& Tp){
 			path.ref.v.push_back(it->ref.v[IDwp]);				// push back waypoint
 			if (((Tp)>=(ctrl_tla + Tcommit))&&(path.ref.x.size()>=3)){		// Path should be at least three points long for controller to work
 				commit.push_back(path);							
-				cout<<"commitment: ref.size()="<<path.ref.x.size()<<", tra.size()="<<path.tra.size()<<endl;
 				return commit;
 			}
 		}
 		commit.push_back(path);
-		// cout<<"commited a ref of size: "<<path.x.size()<<endl;
 	}
 	return commit;	
 }
@@ -403,13 +399,9 @@ void transformPoseCarToRoad(double& Xcar, double& Ycar, double& Hcar, const vect
 	// Transform obstacle to straightened road
 	vector<double> Parc = findClosestPointOnArc(Xcar,Ycar,Cxy);
 	double Xarc{Parc[0]}, Yarc{Parc[1]};
-	cout<<"Xarc="<<Xarc<<"; Yarc="<<Yarc<<endl;
     // ***** Use the previous point to calculate (S,rho) *****
-	cout<<"Cxs=["<<Cxs[0]<<", "<<Cxs[1]<<", "<<Cxs[2]<<"]"<<endl;
     double S = Cxs[0]*pow(Xarc,2) + Cxs[1]*Xarc + Cxs[2];
 	double rho = sqrt(pow(Xarc-Xcar,2) + pow(Yarc-Ycar,2));
-	cout<<"S="<<S<<endl;
-	cout<<"rho="<<rho<<endl;
 
     // half-plane test to determine sign
     double dydx = 2*Cxy[0]*Xarc + Cxy[1];
@@ -512,6 +504,8 @@ void transformPathCarToRoad(vector<Path>& path,const vector<double>& Cxy, const 
 		}
 	}
 }
+
+// void transformVelCarToRoad(const double& Vx, const doubel& Vy, const double)
 
 // void bendPath(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs){
 // 	for(auto it = path.begin(); it!= path.end(); it++){

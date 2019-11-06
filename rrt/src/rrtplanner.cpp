@@ -71,6 +71,7 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 
 	// Initialize tree
 	Node node(path.back().tra.back(), -1, path.back().ref, path.back().tra,0,0,0);
+	node.state[6] = Tc;
 	RRT.tree.push_back(node);
 	cout<<"Initialized tree with last committed reference."<<endl;
 

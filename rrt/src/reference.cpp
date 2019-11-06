@@ -30,7 +30,12 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 	P1.x = goalPose[0]+Dalign*cos(goalPose[2]); P1.y = goalPose[1]+Dalign*sin(goalPose[2]);
 	P2.x = goalPose[0]-Dalign*cos(goalPose[2]); P2.y = goalPose[1]-Dalign*sin(goalPose[2]);
 	double H = atan2(P2.y-P1.y,P2.x-P1.x);
-	assert( (angleDiff(H,goalPose[2])<0.01));
+
+	if (angleDiff(H,goalPose[2])>=0.01){
+		cout<<"H="<<H<<" goalpose[2]="<<goalPose[2]<<endl;
+		assert( (angleDiff(H,goalPose[2])<0.01));
+	}
+
 	// Select closest point
 	if( sqrt( pow(P1.x-node.ref.x.back(),2) + pow(P1.y-node.ref.y.back(),2)) < sqrt( pow(P2.x-node.ref.x.back(),2) + pow(P2.y-node.ref.y.back(),2))){
 		Pclose = P1; Pfar = P2; 
