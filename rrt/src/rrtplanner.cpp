@@ -7,7 +7,8 @@ using namespace std;
 
 void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simulation sim);
 
-MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy){
+MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy, const bool& _bend){
+	bend = _bend;
 	goalReached = 0;
 	sortLimit = 10;
 	direction = 1;
@@ -87,12 +88,12 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const vector<double>& Cxy){;
-	double Lmax = RRT.goalPose[0];// RRT.goalPose[0]
-	geometry_msgs::Point sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
+	// double Lmax = RRT.goalPose[0];// RRT.goalPose[0]
+	// geometry_msgs::Point sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
 	// ROS_WARN_STREAM_ONCE("Sampledomain:"<<double(0)<<", "<<Lmax<<"-"<<RRT.laneShifts[0]<<", "<<RRT.laneShifts[1]);
 	// cout<<"Sx= "<<sample.x<<" s= "<<sample.y<<endl;
-	// vector<double> bounds = {0,150,-50,50};
-	// geometry_msgs::Point sample = sampleAroundVehicle(bounds);
+	vector<double> bounds = {0,RRT.goalPose[0]+5,RRT.goalPose[1]-5, RRT.goalPose[1]+5};
+	geometry_msgs::Point sample = sampleAroundVehicle(bounds);
 	signed int dir = 1; 		// Driving direction variable
 	
 	// Sort existing nodes using randomly selected Heuristics
@@ -303,7 +304,7 @@ void publishVisualization(ros::Publisher* ptrPub, int ID, MyReference& ref, Simu
 visualization_msgs::Marker createReferenceMsg(int iD, const MyReference& ref){
     // Initialize marker message
     static visualization_msgs::Marker msg;
-    msg.header.frame_id = "map";
+    msg.header.frame_id = "center_laser_link";
     msg.header.stamp = ros::Time::now();
     msg.ns = "reference";
     msg.action = visualization_msgs::Marker::ADD;
@@ -334,7 +335,7 @@ visualization_msgs::Marker createReferenceMsg(int iD, const MyReference& ref){
 visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T){
     // Initialize marker message
     static visualization_msgs::Marker msg;
-    msg.header.frame_id = "map";
+    msg.header.frame_id = "center_laser_link";
     msg.header.stamp = ros::Time::now();
     msg.ns = "trajectory";
     msg.action = visualization_msgs::Marker::ADD;

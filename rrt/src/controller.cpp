@@ -35,9 +35,9 @@ ControlCommand Controller::getControls(const MyReference& ref, const Vehicle& ve
 
 double Controller::getAccelerationCommand(const Vehicle& veh, const MyReference& ref, const state_type& x){
     int LAlong = 2;                         // Look additional x points in front of preview point (else velocity error could be zero)
-    int IDend = ref.v.size()-1;             // Index of last reference element
-    int ID = std::min(IDwp+LAlong,IDend);   // Make sure id does not exceed the vector length
-    double E = ref.v[ID]-x[4];              // Error
+    // int IDend = ref.v.size()-1;             // Index of last reference element
+    // int ID = std::min(IDwp+LAlong,IDend);   // Make sure id does not exceed the vector length
+    double E = ref.v[IDwp]-x[4];              // Error
     iE = iE + E*sim_dt;                     // Integral error
 
     // Calculate acceleration command and constrain it

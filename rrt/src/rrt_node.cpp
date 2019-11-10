@@ -1,13 +1,19 @@
 // Global vars for debugging and plotting
 bool draw_tree =0;
 bool draw_obs = 0;
-bool draw_final_path = 0;
+bool draw_final_path = 1;
 bool debug_mode = 0;
 bool debug_reference = 0;
 bool draw_states = 0;
 bool debug_sim = 0;
-bool commit_path = 1;
+bool commit_path = 0;
 double Tcommit {0.4};
+
+// Global variables
+double sim_dt;
+double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
+double ref_res, ref_int, ref_mindist, vmax, vgoal;
+double ay_road_max;
 
 // Include STDLIB headers
 #include <ros/ros.h>
@@ -23,12 +29,6 @@ double Tcommit {0.4};
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
 #include <vision_msgs/Detection2DArray.h>
-
-// Global variables
-double sim_dt;
-double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
-double ref_res, ref_int, ref_mindist, vmax, vgoal;
-double ay_road_max;
 
 // Include messages
 #include "car_msgs/getobstacles.h"
@@ -59,16 +59,6 @@ double ay_road_max;
 #include "testers.cpp"
 #include "motionplanner.cpp"
 
-/* #############################
-	CRITICAL TODO'S
-##############################*/
-// 1. Check cost function and node sorting heuristics
-
-
-
-// #include "matlabgen/transformCarToRoad.h"
-// #include "matlabgen/transformCarToRoad.cpp"
-
 void updateParameters(){
 	// Get parameters from server
 	ros::param::get("ctrl/tla",ctrl_tla);
@@ -82,9 +72,10 @@ void updateParameters(){
 }
 
 int main( int argc, char** argv ){	
+	cout.precision(3);
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
-	ros::NodeHandle nh; ros::Rate rate(2);
+	ros::NodeHandle nh; ros::Rate rate(20);
 	// Get parameters from server
 	updateParameters();
 	// Initialize motion planner object that handles services & callbacks
@@ -92,20 +83,15 @@ int main( int argc, char** argv ){
 	// Create marker publisher for Rviz
 	ros::Publisher pubMarker = nh.advertise<visualization_msgs::Marker>("visualization_marker",10);
 	motionPlanner.pubPtr = &pubMarker; 	// Initialize global pointer to marker publisher
-	
-	// Register service with the master
-	//ros::ServiceServer server = nh.advertiseService("planmotion", &MotionPlanner::planMotion,&motionPlanner);
-	
 	// Motion request subscriber
 	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
-
 	// Publisher for best path
 	ros::Publisher pubBest = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",100);
 	motionPlanner.pubBest = &pubBest;
 	// Publisher for committed path
 	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",100);
 	motionPlanner.pubPlan = &pubPlan;
-
+	// State subscriber
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
 
 	// Register client for obstacle detector

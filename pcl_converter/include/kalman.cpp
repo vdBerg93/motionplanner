@@ -58,12 +58,14 @@ KalmanFilter::KalmanFilter() {
   I.setIdentity();
 
     // Show matrices
-  std::cout << "A: \n" << A << std::endl;
-  std::cout << "C: \n" << C << std::endl;
-  std::cout << "Q: \n" << Q << std::endl;
-  std::cout << "R: \n" << R << std::endl;
-  std::cout << "P0: \n" << P0 << std::endl;
-  std::cout<< "I: \n" << I << std::endl;
+  if (DEBUG){
+    std::cout << "A: \n" << A << std::endl;
+    std::cout << "C: \n" << C << std::endl;
+    std::cout << "Q: \n" << Q << std::endl;
+    std::cout << "R: \n" << R << std::endl;
+    std::cout << "P0: \n" << P0 << std::endl;
+    std::cout<< "I: \n" << I << std::endl;
+  }
 }
 
 void KalmanFilter::init(double t0, const Eigen::VectorXd& x0) {

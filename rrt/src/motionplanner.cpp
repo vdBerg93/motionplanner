@@ -46,8 +46,13 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
-	ay_road_max = abs(pow(worldState[4],2)*(2*req.Cxy[0]));
-
+	// Determine an upperbound of the lateral acceleration introduced by bending the path
+	if (req.Cxy.size()>0){
+		ay_road_max = abs(pow(worldState[4],2)*(2*req.Cxy[0]));
+	}else{
+		ay_road_max = 0;
+	}
+	
 	// Get the array of committed motion plans
 	transformPathWorldToCar(motionplan,worldState);
 	// If road parametrization is available, convert motion spec to straightened scenario
@@ -74,7 +79,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// cout<<"WState= ["<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<", ]"<<endl;
 	
 	// Initialize RRT planner
-	MyRRT RRT(req.goal,req.laneShifts,req.Cxy);	
+	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	// cout<<"Created tree object"<<endl;
 	double Tp = initializeTree(RRT, veh, motionplan, Xend);
 	cout<<"Committed path time= "<<Tp<<endl;
@@ -128,7 +133,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 
 visualization_msgs::Marker clearMessage(){
 	visualization_msgs::Marker msg;
-    msg.header.frame_id = "map";
+    msg.header.frame_id = "center_laser_link";
     msg.header.stamp = ros::Time::now();
     msg.ns = "motionplan";
     msg.action = visualization_msgs::Marker::DELETEALL;
@@ -137,7 +142,7 @@ visualization_msgs::Marker clearMessage(){
 visualization_msgs::Marker generateMessage(const vector<Path>& path){
 // Initialize marker message
     visualization_msgs::Marker msg;
-    msg.header.frame_id = "map";
+    msg.header.frame_id = "center_laser_link";
     msg.header.stamp = ros::Time::now();
     msg.ns = "motionplan";
     msg.action = visualization_msgs::Marker::ADD;
@@ -505,23 +510,4 @@ void transformPathCarToRoad(vector<Path>& path,const vector<double>& Cxy, const 
 	}
 }
 
-// void transformVelCarToRoad(const double& Vx, const doubel& Vy, const double)
-
-// void bendPath(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs){
-// 	for(auto it = path.begin(); it!= path.end(); it++){
-// 		for(int i = 0; i != it->ref.x.size(); i++){
-// 			transformPointRoadToCar(it->ref.x[i],it->ref.y[i],Cxy,Cxs);
-// 			transformPointCarToWorld(it->ref.x[i], it->ref.y[i], worldState);
-// 		}
-// 	}
-// }
-
-// void bendTrajectory(vector<Node>& path, const vector<double>& worldState, const vector<double>& Cxy, const vector<double>& Cxs){
-// 	for(auto it = path.begin(); it!= path.end(); it++){
-// 		for(auto it2 = it->tra.begin(); it2!= it->tra.end(); it2++){
-// 			transformPoseRoadToCar((*it2)[0],(*it2)[1],(*it2)[2],Cxy,Cxs);
-// 			transformPointCarToWorld((*it2)[0], (*it2)[1], worldState);
-// 		}
-// 	}
-// }
 

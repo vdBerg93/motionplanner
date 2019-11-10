@@ -56,6 +56,10 @@ struct MotionPlanner{
 		void updateState(car_msgs::State msg);
 		void publishPlan(const vector<Path>& plan);
 		void publishBestPath(const vector<Path>& path);
+		MotionPlanner(){
+			vector<double> emptystate = {0,0,0,0,0,0};
+			state = emptystate;
+		}
 };
 
 visualization_msgs::Marker clearMessage();

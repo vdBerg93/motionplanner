@@ -39,7 +39,9 @@ Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReferenc
 	Controller control(ref,state);				// Initialize controller
 	// stateArray.back()[6] = 0; 					// Add time to states
 	stateArray.back()[7] = control.IDwp;		// Add waypoint ID in stateArray
-	generateVelocityProfile(ref,state[4],control.IDwp,vmax,vgoal);
+	// generateVelocityProfile(MyReference& ref, const double& v0, const int& IDwp, const double& vmax, const double& vend, const vector<double>& goal, bool GB)
+	generateVelocityProfile(ref,control.IDwp,state[4],vmax,RRT.goalPose,false);
+	// generateVelocityProfile(ref,state[4],control.IDwp,vmax,vgoal);
 	propagate(RRT, control,ref,veh);			// Predict vehicle trajectory
 };
 
@@ -68,15 +70,20 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		x[7] = control.IDwp;									// Add waypoint ID to vehicle state
 		stateArray.push_back(x);									// Add state to statearray
 		costE = costE + x[4]*sim_dt; 								// Update cost estimate for exploration
-		double kappa = tan(x[3])/veh.L;								// Calculate vehicle path curvature
 
-		ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
-		double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
-		double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
-		// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
-		// 		(Dgoallane<Dotherlane)*w2*abs(kappa) + 		// More cost on curvature in next lane
-		// 		wc*Dgoallane;
-		costS += Dgoallane;
+		if (RRT.bend){
+			double kappa = tan(x[3])/veh.L;								// Calculate vehicle path curvature
+			ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
+			double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
+			double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
+			// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
+			// 		(Dgoallane<Dotherlane)*w2*abs(kappa) + 		// More cost on curvature in next lane
+			// 		wc*Dgoallane;
+			costS += Dgoallane;
+		}else{
+			costS += sim_dt;
+		}
+
 
 		// Check acceleration limits
 		// Alternative: ay = r*u, ay = u^2 *tan(delta)/L
@@ -94,9 +101,9 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		}
 
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
-		double term_velocity = 0.1;
-		// if((control.endreached)&&(abs(x[4]-ref.v.back())<term_velocity)){
-		if (control.endreached){
+		
+		double Verror = (x[4]-ref.v.back());
+		if (control.endreached&&(Verror<0.1)){
 			if(debug_sim){	ROS_INFO_STREAM("end reached");}
 			endReached = true; return;
 		}
@@ -104,10 +111,13 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		double dist_to_goal = sqrt( pow(x[0]-RRT.goalPose[0],2) + pow(x[1]-RRT.goalPose[1],2));
 		double goal_heading_error = abs(angleDiff(x[2],RRT.goalPose[2]));
 		
-		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
-		if(debug_sim){	ROS_INFO_STREAM("goal reached");}
-			goalReached = true; return;
+		if ((dist_to_goal<=2)&&(goal_heading_error<0.1)){
+			double Verror = (x[4]-RRT.goalPose[3]);
+			if(debug_mode){ROS_WARN_STREAM("Near goal! Vel error= "<<Verror);}
+			if (Verror<0.05){
+				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
+				goalReached = true; return;
+			}
 		}
 	}	
-
 };
