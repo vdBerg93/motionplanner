@@ -1,6 +1,6 @@
 <launch>
 	<!-- Initialize parameters -->
-	<param 	name="ctrl/tla"		value="1.2"	/>
+	<param 	name="ctrl/tla"		value="1.4"	/>
 	<param 	name="ctrl/mindla"	value="3.2"	/>
 	<param 	name="ctrl/dlavmin"	value="3"	/>
 	<param 	name="ctrl/refint"	value="0.02"	/>

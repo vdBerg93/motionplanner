@@ -1,7 +1,7 @@
 // Global vars for debugging and plotting
-bool draw_tree =0;
+bool draw_tree =1;
 bool draw_obs = 0;
-bool draw_final_path = 1;
+bool draw_final_path = 0;
 bool debug_mode = 0;
 bool debug_reference = 0;
 bool draw_states = 0;
@@ -81,7 +81,7 @@ int main( int argc, char** argv ){
 	// Initialize motion planner object that handles services & callbacks
 	MotionPlanner motionPlanner;
 	// Create marker publisher for Rviz
-	ros::Publisher pubMarker = nh.advertise<visualization_msgs::Marker>("visualization_marker",10);
+	ros::Publisher pubMarker = nh.advertise<visualization_msgs::MarkerArray>("tree_markerarray",10);
 	motionPlanner.pubPtr = &pubMarker; 	// Initialize global pointer to marker publisher
 	// Motion request subscriber
 	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
@@ -99,7 +99,7 @@ int main( int argc, char** argv ){
 	motionPlanner.clientPtr = &client;
 
 	// Give control to ROS
-	cout<<"RRT Motion Planning Node running..."<<endl;
+	cout<<"RRT Node running..."<<endl;
 	while(ros::ok()){
 		ros::spin();
 	}

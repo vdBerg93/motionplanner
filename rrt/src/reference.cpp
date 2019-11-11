@@ -5,11 +5,11 @@
 #include "rrt/rrtplanner.h"
 #include "ros/ros.h"
 
+// Generate a linear reference paths
 MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir){
 	MyReference ref;
 	double L = sqrt( pow(sample.x-node.ref.x.back(),2) + pow(sample.y-node.ref.y.back(),2) );
 	int N = round(L/ref_res)+1;
-	//cout<<"res="<<ref_res<<" L="<<L<<" n="<<N<<endl;
 	ref.x = LinearSpacedVector(node.ref.x.back(),sample.x,N);
 	ref.y = LinearSpacedVector(node.ref.y.back(),sample.y,N);
 	ref.dir = dir;
@@ -18,6 +18,7 @@ MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir)
 	return ref;
 };
 
+// Generate a goal biased reference
 MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalPose){;
 	double Dextend = ctrl_dla;//+1.2;
 	double Dalign = 1;
@@ -29,14 +30,6 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 	P1.x = goalPose[0]+Dalign*cos(goalPose[2]); P1.y = goalPose[1]+Dalign*sin(goalPose[2]);
 	P2.x = goalPose[0]-Dalign*cos(goalPose[2]); P2.y = goalPose[1]-Dalign*sin(goalPose[2]);
 	double H = atan2(P2.y-P1.y,P2.x-P1.x);
-
-	// double dA = wrapToPi(H-goalPose[2]);
-	
-	// if (abs(angleDiff(H,goalPose[2]))>=0.01){
-	// 	cout<<"H="<<H<<" goalpose[2]="<<goalPose[2]<<endl;
-	// 	cout<<"angleDiff="<<angleDiff(H,goalPose[2])<<endl;
-	// 	assert( (angleDiff(H,goalPose[2])<0.01));
-	// }
 
 	// Select closest point
 	if( sqrt( pow(P1.x-node.ref.x.back(),2) + pow(P1.y-node.ref.y.back(),2)) < sqrt( pow(P2.x-node.ref.x.back(),2) + pow(P2.y-node.ref.y.back(),2))){
@@ -68,6 +61,7 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 	return ref;
 };
 
+// Generate a trapezoidal velocity profile
 void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0, const double& vmax, const vector<double>& goal, bool GB){
 	// generateVelProfile(ref,v0,vmax,vend,IDwp,goal,GB)
 	double vend = goal[3];
@@ -80,10 +74,10 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double res = Ltotal/(ref.x.size()-1); 		// ref_res of the reference path
 	// Total length from the first waypoint until end of reference
 	double Lp = sqrt( pow(ref.x.back()-ref.x[IDwp],2) +  pow(ref.y.back()-ref.y[IDwp],2) );
-    // if (!GB){
-    //     double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
-    //     Lp = Lp + Dgoal;
-	// }
+    if (!GB){
+        double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
+        Lp = Lp + Dgoal;
+	}
      
 	// Check if the maximum coasting velocity can be reached for minimum time tmin
 	double Daccel = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
@@ -148,7 +142,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	// For debugging
 	double Dtotal = Daccel+Dbrake+Dcoast;
     if ( (Dtotal - Lp)> 0.25){
-		ROS_WARN_STREAM("Velocity profile does not fit into reference!");
+		// ROS_WARN_STREAM("Velocity profile does not fit into reference!");
 		// cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
 		// cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
 		// cout<<"Vcoast = "<<Vcoast<<endl;

@@ -12,9 +12,9 @@ class Simulation{
 		vector<double> curvature;
 		vector<int> closestPoints;
 		double costS, costE;
-
+		
 		bool goalReached, endReached;
-		Simulation(const MyRRT& RRT,  const vector<double>& state, MyReference& ref, const Vehicle& veh);
+		Simulation(const MyRRT& RRT,  const vector<double>& state, MyReference& ref, const Vehicle& veh, bool GoalBiased);
 		bool isvalid();
 };
 bool Simulation::isvalid()

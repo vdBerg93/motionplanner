@@ -79,8 +79,8 @@ vector<int> sortNodesOptimize(const MyRRT& rrt, const geometry_msgs::Point& samp
 bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point& sample);
 bool feasibleGoalBias(const MyRRT& rrt);
 float dubinsDistance(geometry_msgs::Point S, Node N, int dir);
-visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T);
-visualization_msgs::Marker createReferenceMsg(int iD, const MyReference& ref);
+visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T, bool goalReached);
+visualization_msgs::Marker createEmptyMsg();
 
 
 // Reference generation functions

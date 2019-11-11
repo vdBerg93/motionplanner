@@ -30,15 +30,18 @@ int main( int argc, char** argv ){
     // Initialize message publishers
     ros::Publisher pubMP = nh.advertise<car_msgs::MotionRequest>("/motionplanner/request",100);
     msgManager.ptrPubMP = &pubMP;
-    ros::Rate rate(10);
+    ros::Rate rate(5);
     // Give control to ROS for goal definition
     
     while (ros::ok()){
         if (msgManager.goalReceived){
             sendMotionRequest(msgManager.ptrPubMP, msgManager.goalC, msgManager.Vmax);
+            // cout<<"Press any key to continue to next iteration"<<endl;
+            // cin.get();
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }
+
         ros::spinOnce();
     }
 }

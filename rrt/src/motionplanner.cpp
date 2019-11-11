@@ -1,32 +1,29 @@
-
+// Get updated obstacles from obstacle detection node
 bool MotionPlanner::updateObstacles(){
     car_msgs::getobstacles srv;
     (*clientPtr).call(srv);
 	det = srv.response.obstacles;
 }
 
+// State callback message
 void MotionPlanner::updateState(car_msgs::State msg){
 	state.clear();
 	state.insert(state.begin(), msg.state.begin(), msg.state.end());
 	assert(state.size()==6);
 }
 
-vector<double> convertcarPose(const vector<double>& worldState){
-	vector<double> carPose = worldState;
-	carPose[0] = 0; carPose[1] = 0; carPose[2]=0;
-	return carPose;
-}
-
- void showPath(const vector<Path>& path){
+// Print a path to the terminal
+void showPath(const vector<Path>& path){
 	 for(auto it = path.begin(); it!=path.end(); it++){
 		 cout<<"Refx = ["<<it->ref.x.front()<<", "<<it->ref.x.back()<<"]"<<endl;
 		 cout<<"Refy = ["<<it->ref.y.front()<<", "<<it->ref.y.back()<<"]"<<endl;
 		 cout<<"Trax = ["<<it->tra.front()[0]<<", "<<it->tra.back()[0]<<"]"<<endl;
 		 cout<<"Tray = ["<<it->tra.front()[1]<<", "<<it->tra.back()[1]<<"]"<<endl;
 	 }
- }
+}
 
- void showNode(const Node& node){
+// Print a node to the terminal
+void showNode(const Node& node){
 	cout<<"--- Node output ---"<<endl;
 	cout<<"Refx = ["<<node.ref.x.front()<<", "<<node.ref.x.back()<<"]"<<endl;
 	cout<<"Refy = ["<<node.ref.y.front()<<", "<<node.ref.y.back()<<"]"<<endl;
@@ -35,14 +32,15 @@ vector<double> convertcarPose(const vector<double>& worldState){
 		cout<<*it<<", ";
 	}
 	cout<<endl;
- }
+}
 
+// Motion planner callback
 void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"----------------------------------"<<endl<<"Received request, processing..."<<endl;
 	// Update variables
 	Vehicle veh; veh.setTalos();	
 	vector<double> worldState = state;
-	vector<double> carPose = convertcarPose(worldState);
+	vector<double> carPose = transformPoseWorldToCar(worldState);
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
@@ -71,32 +69,22 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 
 	// Predict state after tree build
 	vector<double> Xend = carPose;
-	// predictState(Xend,veh,0.06);
-	// cout<<"Pred. state= ["<<Xend[0]<<", "<<Xend[1]<<", "<<Xend[2]<<", "<<Xend[3]<<", "<<Xend[4]<<", "<<Xend[5]<<", ]"<<endl;
-	// showPath(motionplan);
-	// For debugging
-	// cout<<"# Obstacles= "<<det.size()<<endl;
-	// cout<<"WState= ["<<worldState[0]<<", "<<worldState[1]<<", "<<worldState[2]<<", "<<worldState[3]<<", "<<worldState[4]<<", "<<worldState[5]<<", ]"<<endl;
-	
+
 	// Initialize RRT planner
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	// cout<<"Created tree object"<<endl;
 	double Tp = initializeTree(RRT, veh, motionplan, Xend);
 	cout<<"Committed path time= "<<Tp<<endl;
-	// showNode(RRT.tree.front());
-
-	// cout<<"-- Motion plan in car coordinates (straightened)-- "<<endl;
-	// showPath(motionplan);
 
 	// Build the tree
-	Timer timer(100); int iter = 0;				
+	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
 	cout<<"Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations"<<endl;
 
 	// Select best path
-	vector<Node> bestPath = extractBestPath(RRT.tree,1);
+	vector<Node> bestPath = extractBestPath(RRT.tree,pubPtr);
 	// Stop when tree is empty
 	if(bestPath.size()==0){
 		ROS_ERROR_STREAM("NO SOLUTION FOUND");
@@ -131,14 +119,15 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
 
+// Message for clearing all markers
 visualization_msgs::Marker clearMessage(){
 	visualization_msgs::Marker msg;
     msg.header.frame_id = "center_laser_link";
-    msg.header.stamp = ros::Time::now();
     msg.ns = "motionplan";
     msg.action = visualization_msgs::Marker::DELETEALL;
 }
 
+// Message for publishing a path to Rviz
 visualization_msgs::Marker generateMessage(const vector<Path>& path){
 // Initialize marker message
     visualization_msgs::Marker msg;
@@ -150,7 +139,7 @@ visualization_msgs::Marker generateMessage(const vector<Path>& path){
 
     msg.id = 0;
     msg.type = visualization_msgs::Marker::LINE_STRIP;
-    msg.scale.x = 1;	// msg/LINE_LIST markers use only the x component of scale, for the line width
+    msg.scale.x = 0.1;	// msg/LINE_LIST markers use only the x component of scale, for the line width
 
     msg.color.r = 0.0;
     msg.color.b = 0.0;
@@ -170,6 +159,7 @@ visualization_msgs::Marker generateMessage(const vector<Path>& path){
     return msg;    
 }
 
+// Publish a path
 void publishPath(const vector<Path>& path, ros::Publisher* ptrPub){
 	// visualization_msgs::Marker msg = clearMessage();
 	// ptrPub->publish(msg);
@@ -177,6 +167,7 @@ void publishPath(const vector<Path>& path, ros::Publisher* ptrPub){
 	ptrPub->publish(msg);
 }   
 
+// Commit to a path section
 vector<Path> getCommittedPath(vector<Node> bestPath, double& Tp){
 	// Find committed reference
 	vector<Path> commit;
@@ -199,6 +190,7 @@ vector<Path> getCommittedPath(vector<Node> bestPath, double& Tp){
 	return commit;	
 }
 
+// Future state prediction
 void predictState(vector<double>& X0, const Vehicle& veh, double t){
 	double dt = 0.01;
 	for(int i = 0; i!=int(t/dt); i++){
@@ -209,6 +201,7 @@ void predictState(vector<double>& X0, const Vehicle& veh, double t){
 	}
 }
 
+// Prepare motion response message
 car_msgs::MotionResponse preparePathMessage(const vector<Path>& path){
 	car_msgs::MotionResponse resp;
 	for(auto it = path.begin(); it!=path.end(); ++it){
@@ -234,6 +227,7 @@ car_msgs::MotionResponse preparePathMessage(const vector<Path>& path){
 	return resp;
 }
 
+// Merge nodes into a path
 vector<Path> convertNodesToPath(const vector<Node> &path){
 	// Prepare message
 	vector<Path> result;
@@ -247,6 +241,7 @@ vector<Path> convertNodesToPath(const vector<Node> &path){
 	return result;
 }
 
+// Publish the motion plan
 void MotionPlanner::publishPlan(const vector<Path>& plan){
 		car_msgs::MotionResponse resp = preparePathMessage(plan);
 		// Push into message
@@ -258,6 +253,7 @@ void MotionPlanner::publishPlan(const vector<Path>& plan){
 	(*pubPlan).publish(resp);
 }
 
+// Publish the best path
 void MotionPlanner::publishBestPath(const vector<Path>& path){
 	car_msgs::MotionResponse resp = preparePathMessage(path);
 	(*pubBest).publish(resp);
@@ -268,20 +264,23 @@ void MotionPlanner::publishBestPath(const vector<Path>& path){
 /**************************************
  **** TRANSFORMATIONS OF 2D POINTS ****
  *************************************/
+
+// Homogenous transformation from world to car
 void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose){
-	// Homogenous transformation from world to car
 	double Xc = Xw*cos(carPose[2]) - carPose[0]*cos(carPose[2]) - carPose[1]*sin(carPose[2]) + Yw*sin(carPose[2]);
     double Yc = Yw*cos(carPose[2]) - carPose[1]*cos(carPose[2]) + carPose[0]*sin(carPose[2]) - Xw*sin(carPose[2]);
 	Xw = Xc; Yw = Yc;
 }
+
+// Homogenous transformation from car to world
 void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose){
-	// Homogenous transformation from car to world
 	double Xw = cos(carPose[2])*Xc - sin(carPose[2])*Yc + carPose[0];
 	double Yw = sin(carPose[2])*Xc + cos(carPose[2])*Yc + carPose[1];
 	Xc = Xw; Yc = Yw;
 }
+
+// Find closest point on the road centerline arc
 vector<double> findClosestPointOnArc(const double& Xcar, const double& Ycar, const vector<double>& Cxy){
-	    // ***** Find closest point on the road centerline arc *****
     // x = arg min norm([Xcarar,Ycarar]-[xroad,yroad]) (solved symbolically in MATLAB)
 	// Results are valid
 	float t2 = abs(Cxy[0]);
@@ -313,6 +312,8 @@ vector<double> findClosestPointOnArc(const double& Xcar, const double& Ycar, con
 	vector<double> result {Xarc,Yarc};
 	return result;
 }
+
+// Transform a point from curved-frame to straight-frame
 void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cxy, const vector<double>& Cxs){
 	vector<double> Parc = findClosestPointOnArc(Xcar,Ycar,Cxy);
 	double Xarc{Parc[0]}, Yarc{Parc[1]};
@@ -338,6 +339,8 @@ void transformPointCarToRoad(double& Xcar, double& Ycar,const vector<double>& Cx
 	// ***** Update coordinates *****
 	Xcar = Xstraight; Ycar = Ystraight;
 }
+
+// Transform a point from the curved-frame to straight-frame
 void transformPointRoadToCar(double& Xstraight, double& Ystraight,const vector<double>& Cxy, const vector<double>& Cxs){
     //##### Find point on straightened road #####
     double Xroads = (Xstraight - Cxy[2]*Cxy[1] + Cxy[1]*Ystraight)/(pow(Cxy[1],2) + 1);
@@ -399,6 +402,12 @@ void transformStateRoadToCar(state_type& state, const vector<double>& Cxy, const
 /*******************************************************
  ****** POSE TRANSFORMATIONS ***************************
  ******************************************************/
+
+vector<double> transformPoseWorldToCar(const vector<double>& worldState){
+	vector<double> carPose = worldState;
+	carPose[0] = 0; carPose[1] = 0; carPose[2]=0;
+	return carPose;
+}
 
 void transformPoseCarToRoad(double& Xcar, double& Ycar, double& Hcar, const vector<double>& Cxy, const vector<double>& Cxs){
 	// Transform obstacle to straightened road
