@@ -19,6 +19,7 @@ double ay_road_max;
 int fail_iterlimit{0};
 int fail_collision{0};
 int fail_acclimit{0};
+int sim_count{0};
 
 // Include STDLIB headers
 #include <ros/ros.h>

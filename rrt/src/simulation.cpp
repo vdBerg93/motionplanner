@@ -60,6 +60,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		cout<<"-------------------------------------------------------------"<<endl;
 	}
 	for(int i = 0; i<(20/sim_dt); i++){
+		sim_count++;
 		state_type x = stateArray[i];								// Set x as last vehicle state
 		ControlCommand ctrlCmd = control.getControls(ref,veh,x);	// Get controls for state
 		state_type dx = VehicleODE(ctrlCmd, x, veh);				// Get vehicle state transition
