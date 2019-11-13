@@ -19,6 +19,7 @@ double ay_road_max;
 int fail_iterlimit{0};
 int fail_collision{0};
 int fail_acclimit{0};
+int sim_count{0};
 
 // Include STDLIB headers
 #include <ros/ros.h>
@@ -77,7 +78,7 @@ void updateParameters(){
 }
 
 int main( int argc, char** argv ){	
-	cout.precision(3);
+	// cout.precision(3);
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
 	ros::NodeHandle nh; ros::Rate rate(20);

@@ -86,6 +86,8 @@ visualization_msgs::Marker createEmptyMsg();
 // Reference generation functions
 void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend);
 MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir);
+vector<double> getCoefficients(const double& Sf, const double& v0, const double& vf, const double& a0, const double& af);
+double getVelocity(const double& v0, const vector<double>& coef, const double& t);
 
 /* ----------------------------------------
         SIMPLE DATA OPERATIONS

@@ -36,7 +36,7 @@ void showNode(const Node& node){
 
 // Motion planner callback
 void MotionPlanner::planMotion(car_msgs::MotionRequest req){
-	fail_acclimit=0; fail_collision=0; fail_iterlimit=0;
+	fail_acclimit=0; fail_collision=0; fail_iterlimit=0; sim_count = 0;
 
 	cout<<"----------------------------------"<<endl<<"Received request, processing..."<<endl;
 	// Update variables
@@ -56,7 +56,6 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// Get the array of committed motion plans
 	transformPathWorldToCar(motionplan,worldState);
 	// If road parametrization is available, convert motion spec to straightened scenario
-
 	if(req.bend){
 		transformPathCarToRoad(motionplan,req.Cxy,req.Cxs, veh);
 		// Convert the obstacles
@@ -79,7 +78,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Committed path time= "<<Tp<<endl;
 
 	// Build the tree
-	Timer timer(500); int iter = 0;				
+	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
@@ -93,7 +92,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	}
 	// Select a part to commit here
 	vector<Path> commit;
-	if(Tp<(ctrl_tla + 0.5*Tcommit)){
+	if(Tp<Tcommit){
 		commit = getCommittedPath(bestPath, Tp);
 	}else{
 		ROS_INFO_STREAM("No commitment required.");
@@ -118,7 +117,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	transformPathCarToWorld(best,worldState);
 	publishBestPath(best);
 	
-	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<endl;
+	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
 

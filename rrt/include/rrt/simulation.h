@@ -11,10 +11,11 @@ class Simulation{
 		StateArray stateArray;
 		vector<double> curvature;
 		vector<int> closestPoints;
+		vector<double> acmd,dcmd; // controls logging
 		double costS, costE;
 		
 		bool goalReached, endReached;
-		Simulation(const MyRRT& RRT,  const vector<double>& state, MyReference& ref, const Vehicle& veh, bool GoalBiased);
+		Simulation(const MyRRT& RRT,  const vector<double>& state, MyReference& ref, const Vehicle& veh, bool GoalBiased, bool genProfile);
 		bool isvalid();
 };
 bool Simulation::isvalid()

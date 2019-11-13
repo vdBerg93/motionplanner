@@ -33,12 +33,14 @@ void IntegrateEuler(ControlCommand& ctrl, state_type& x, state_type& dx, double&
 	enforceConstraints(veh.amin, veh.amax, dx[5]);
 };
 
-Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReference& ref, const Vehicle& veh, bool GoalBiased): 
+Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReference& ref, const Vehicle& veh, bool GoalBiased, bool genProfile): 
 	costE(0), costS(0), goalReached(false), endReached(false){
 	stateArray.push_back(state); 				// Push initial state into statearray
 	Controller control(ref,state);				// Initialize controller
 	stateArray.back()[7] = control.IDwp;		// Add waypoint ID in stateArray
-	generateVelocityProfile(ref,control.IDwp,state[4],vmax,RRT.goalPose,GoalBiased);
+	if (genProfile){
+		generateVelocityProfile(ref,control.IDwp,state[4],vmax,RRT.goalPose,GoalBiased);
+	}
 	propagate(RRT, control,ref,veh);			// Predict vehicle trajectory
 };
 
@@ -59,12 +61,20 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		cout<<"[ "<<ref.y.front()<<" -> "<<ref.y.back()<<" ]"<<endl;
 		cout<<"-------------------------------------------------------------"<<endl;
 	}
+	if ((ref.v.back()<-100)||(ref.v.back()>100)){
+		showVelocityProfile(ref);
+		sleep(100);
+	}
+	
 	for(int i = 0; i<(20/sim_dt); i++){
+		sim_count++;
 		state_type x = stateArray[i];								// Set x as last vehicle state
 		ControlCommand ctrlCmd = control.getControls(ref,veh,x);	// Get controls for state
 		state_type dx = VehicleODE(ctrlCmd, x, veh);				// Get vehicle state transition
 		IntegrateEuler(ctrlCmd, x, dx, sim_dt, veh);				// Get new state
 		x[7] = control.IDwp;									// Add waypoint ID to vehicle state
+		x.push_back(ctrlCmd.ac);		// Control logging
+		x.push_back(ctrlCmd.dc);		// Control logging
 		stateArray.push_back(x);									// Add state to statearray
 		// costE = costE + x[4]*sim_dt; 								// Update cost estimate for exploration
 		costE += sim_dt;
@@ -108,7 +118,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
 			double Verror = (x[4]-RRT.goalPose[3]);
-			ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
+			// ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
 			// showVelocityProfile(ref);
 			if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
@@ -116,7 +126,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			}
 		}
 	}	
-	cout<<"IDwp="<<control.IDwp<<"max ID="<<(ref.x.size()-1)<<"verror="<<(stateArray.back()[4]-RRT.goalPose[3])<<endl;
-	showVelocityProfile(ref);
+	// cout<<"IDwp="<<control.IDwp<<"max ID="<<(ref.x.size()-1)<<"verror="<<(stateArray.back()[4]-RRT.goalPose[3])<<endl;
+	// showVelocityProfile(ref);
 	fail_iterlimit++;
 };
