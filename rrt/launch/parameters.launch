@@ -5,8 +5,8 @@
 	<param 	name="ctrl/dlavmin"	value="3"	/>
 	<param 	name="ctrl/refint"	value="0.02"	/>
 	<param 	name="ctrl/refmindist"	value="0.2"	/>
-	<param 	name="ctrl/sampleTime" 	value="0.1"	/>
-	<param 	name="ctrl/Kp"		value="6"	/>
+	<param 	name="ctrl/sampleTime" 	value="0.04"	/>
+	<param 	name="ctrl/Kp"		value="8"	/>
 	<param 	name="ctrl/Ki" 		value="0"	/>
 	<param  name="max_velocity"	value="8"	/>
 </launch>

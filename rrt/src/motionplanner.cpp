@@ -36,6 +36,8 @@ void showNode(const Node& node){
 
 // Motion planner callback
 void MotionPlanner::planMotion(car_msgs::MotionRequest req){
+	fail_acclimit=0; fail_collision=0; fail_iterlimit=0;
+
 	cout<<"----------------------------------"<<endl<<"Received request, processing..."<<endl;
 	// Update variables
 	Vehicle veh; veh.setTalos();	
@@ -77,7 +79,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Committed path time= "<<Tp<<endl;
 
 	// Build the tree
-	Timer timer(200); int iter = 0;				
+	Timer timer(500); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
@@ -116,6 +118,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	transformPathCarToWorld(best,worldState);
 	publishBestPath(best);
 	
+	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
 
@@ -139,7 +142,7 @@ visualization_msgs::Marker generateMessage(const vector<Path>& path){
 
     msg.id = 0;
     msg.type = visualization_msgs::Marker::LINE_STRIP;
-    msg.scale.x = 0.1;	// msg/LINE_LIST markers use only the x component of scale, for the line width
+    msg.scale.x = 0.3;	// msg/LINE_LIST markers use only the x component of scale, for the line width
 
     msg.color.r = 0.0;
     msg.color.b = 0.0;
@@ -164,7 +167,8 @@ void publishPath(const vector<Path>& path, ros::Publisher* ptrPub){
 	// visualization_msgs::Marker msg = clearMessage();
 	// ptrPub->publish(msg);
 	visualization_msgs::Marker msg = generateMessage(path);
-	ptrPub->publish(msg);
+	visualization_msgs::MarkerArray msg2; msg2.markers.push_back(msg);
+	ptrPub->publish(msg2);
 }   
 
 // Commit to a path section

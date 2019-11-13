@@ -79,9 +79,9 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			costS += Dgoallane;
 		}else{
 			// costS += sim_dt + 10*kappa;
-			// costS += kappa;
 			// costS += x[4]*sim_dt;
-			costS += sim_dt + 0.2*kappa;
+			// costS += sim_dt + 0.2*kappa;
+			costS += sim_dt + 100*kappa;
 		}
 
 		// Check acceleration limits
@@ -89,14 +89,12 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		ROS_WARN_STREAM_THROTTLE(2,"Max road lateral acceleration: "<<ay_road_max);
 		if ( ay + ay_road_max> 3){
 			if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3]);}
-			endReached = false; return;
+			endReached = false; fail_acclimit++;
+			return;
 		}
 		if (draw_states){
 			// Print the states
-			cout<<"x="<<stateArray.back()[0]<<",\ty="<<stateArray.back()[1]<<",\thead="<<stateArray.back()[2]<<",\td="<<stateArray.back()[3]<<",\tv="<<stateArray.back()[4]<<",\ta="<<stateArray.back()[5]
-			// Print the control variables
-			<<",\tt="<<stateArray.back()[6]<<",\tIDwp="<<stateArray.back()[7]<<", \t\t\tWpx="<<control.Ppreview.x<<", \t WPy="<<control.Ppreview.y<<",\tvcmd="<<ref.v[control.IDwp]<<",\tym="<<control.ym<<endl;
-		}
+			}
 
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double Verror = (x[4]-ref.v.back());
@@ -110,11 +108,15 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
 			double Verror = (x[4]-RRT.goalPose[3]);
-			if(debug_mode){ROS_WARN_STREAM("Near goal! Vel error= "<<Verror);}
-			if (Verror<0.05){
+			ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
+			// showVelocityProfile(ref);
+			if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
 				goalReached = true; return;
 			}
 		}
 	}	
+	cout<<"IDwp="<<control.IDwp<<"max ID="<<(ref.x.size()-1)<<"verror="<<(stateArray.back()[4]-RRT.goalPose[3])<<endl;
+	showVelocityProfile(ref);
+	fail_iterlimit++;
 };

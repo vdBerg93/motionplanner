@@ -66,18 +66,20 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	// generateVelProfile(ref,v0,vmax,vend,IDwp,goal,GB)
 	double vend = goal[3];
 	// Slope shape configuration
-	double a_acc = 1;
-	double a_dec = -1;
-	double tmin = 1;  
-	// Total reference length
-	double Ltotal = sqrt( pow(ref.x.back()-ref.x.front(),2) + pow(ref.y.back()-ref.y.front(),2) ) ;
-	double res = Ltotal/(ref.x.size()-1); 		// ref_res of the reference path
+	double a_acc = 1;	double a_dec = -1; 	double tmin = 1;  
+	// Use first three point of reference to determine the resolution
+	double Lpoints = sqrt( pow(ref.x[2]-ref.x[0],2) + pow(ref.y[2]-ref.y[0],2) ) ;
+	double res = Lpoints/2; 		// ref_res of the reference path
 	// Total length from the first waypoint until end of reference
-	double Lp = sqrt( pow(ref.x.back()-ref.x[IDwp],2) +  pow(ref.y.back()-ref.y[IDwp],2) );
+	cout<<"IDwp="<<IDwp<<", res="<<res<<endl;
+	// double Lp = (ref.x.size()-IDwp-1)*res;
+	double Lp = (ref.x.size()-IDwp)*res;
+	// double Lp = (ref.x.size()-1)*res;
     if (!GB){
         double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
         Lp = Lp + Dgoal;
 	}
+	
      
 	// Check if the maximum coasting velocity can be reached for minimum time tmin
 	double Daccel = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
@@ -141,13 +143,26 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	ref.v.front()+=0.1; // Initialize with small velocity to get car moving
 	// For debugging
 	double Dtotal = Daccel+Dbrake+Dcoast;
-    if ( (Dtotal - Lp)> 0.25){
-		// ROS_WARN_STREAM("Velocity profile does not fit into reference!");
-		// cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
-		// cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
-		// cout<<"Vcoast = "<<Vcoast<<endl;
+    if (Dtotal<Lp){
+		ROS_WARN_STREAM("Velocity profile is too small!");
+		cout<<"IDwp="<<IDwp<<endl;
+		cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
+		cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
+		cout<<"Vcoast = "<<Vcoast<<endl;
 	}
 	assert(ref.v.size()==ref.x.size());
+}
+
+void showVelocityProfile(const MyReference& ref){
+	cout<<endl<<"---Reference---"<<endl;
+	cout<<"x = ["<<ref.x.front()<<", "<<ref.x.back()<<"]"<<endl;
+	cout<<"y = ["<<ref.y.front()<<", "<<ref.y.back()<<"]"<<endl;
+	cout<<"Velocity profile: "<<endl;
+	auto it = ref.v.begin();
+	for(it; it!=ref.v.end(); it++){
+		cout<<*it<<", ";
+	}
+	cout<<endl<<endl;
 }
 
 // void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend){

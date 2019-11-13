@@ -36,8 +36,8 @@ int main( int argc, char** argv ){
     while (ros::ok()){
         if (msgManager.goalReceived){
             sendMotionRequest(msgManager.ptrPubMP, msgManager.goalC, msgManager.Vmax);
-            // cout<<"Press any key to continue to next iteration"<<endl;
-            // cin.get();
+            cout<<"Press any key to continue to next iteration"<<endl;
+            cin.get();
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }

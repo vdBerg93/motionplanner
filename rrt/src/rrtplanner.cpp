@@ -108,6 +108,8 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 				Node node(sim.stateArray.back(), *it, ref,sim.stateArray, sim.costE + RRT.tree[*it].costE, sim.costS + RRT.tree[*it].costS, sim.goalReached);
 				RRT.addNode(node); 	node_added = true;
 				break;
+			}else{
+				fail_collision++;
 			}
 		}
 	}; 
@@ -123,6 +125,8 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 			if(!checkCollision(ptrPub,sim_goal.stateArray,det)){
 				Node node_goal(sim_goal.stateArray.back(), RRT.tree.size()-1, ref_goal, sim_goal.stateArray,sim_goal.costE + RRT.tree.back().costE, sim_goal.costS + RRT.tree.back().costS, sim_goal.goalReached);
 				RRT.addNode(node_goal);
+			}else{
+				fail_collision++;
 			}
 		}
 	}
@@ -212,7 +216,7 @@ bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point
 	// Calculate length of new reference
 	double Lref = sqrt( pow(node.ref.x.back()-sample.x,2) + pow(node.ref.y.back()-sample.y,2));
 	// Reject when heading difference exceeds limit
-	if (abs(angleDiff(angNew,angPar))>(pi/8)){
+	if (abs(angleDiff(angNew,angPar))>(pi/4)){
         return false;
     }
 	// Reject when new reference would be too short (at least 3 data points)
