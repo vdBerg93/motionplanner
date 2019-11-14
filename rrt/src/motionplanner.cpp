@@ -219,10 +219,10 @@ car_msgs::MotionResponse preparePathMessage(const vector<Path>& path){
 		for(int i = 0; i<it->tra.size(); i++){
 			tra.x.push_back(it->tra[i][0]);
 			tra.y.push_back(it->tra[i][1]);
-			// tra.theta.push_back(it->tra[i][2]);
-			// tra.delta.push_back(it->tra[i][3]);
-			// tra.v.push_back(it->tra[i][4]);
-			// tra.a.push_back(it->tra[i][5]);
+			tra.theta.push_back(it->tra[i][2]);
+			tra.delta.push_back(it->tra[i][3]);
+			tra.v.push_back(it->tra[i][4]);
+			tra.a.push_back(it->tra[i][5]);
 			tra.a_cmd.push_back(it->tra[i][8]);
 			tra.d_cmd.push_back(it->tra[i][9]);
 		}

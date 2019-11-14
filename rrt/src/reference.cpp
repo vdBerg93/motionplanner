@@ -79,7 +79,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
         double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
         Lp = Lp + Dgoal;
 	}else{
-		Lp -= 2;
+		Lp -= 1;
 	}
 	
      
@@ -145,13 +145,13 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	ref.v.front()+=0.1; // Initialize with small velocity to get car moving
 	// For debugging
 	double Dtotal = Daccel+Dbrake+Dcoast;
-    if (Dtotal<Lp){
-		ROS_WARN_STREAM("Velocity profile is too small!");
-		cout<<"IDwp="<<IDwp<<endl;
-		cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
-		cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
-		cout<<"Vcoast = "<<Vcoast<<endl;
-	}
+    // if (Dtotal<Lp){
+	// 	ROS_WARN_STREAM("Velocity profile is too small!");
+	// 	cout<<"IDwp="<<IDwp<<endl;
+	// 	cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
+	// 	cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
+	// 	cout<<"Vcoast = "<<Vcoast<<endl;
+	// }
 	assert(ref.v.size()==ref.x.size());
 }
 

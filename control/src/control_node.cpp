@@ -10,6 +10,7 @@ using namespace std;
 
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include "car_msgs/MotionResponse.h"
+#include "car_msgs/State.h"
 #include "prius_msgs/Control.h"
 
 #include "control/observer.h"
@@ -26,7 +27,7 @@ int main( int argc, char** argv ){
     // Communication class init
     Observer observer(&pubControl);
     // Initialize message subscribers
-    ros::Subscriber subState = nh.subscribe("/amcl_pose",1000,&Observer::callbackState, &observer);
+    ros::Subscriber subState = nh.subscribe("/carstate",1000,&Observer::callbackState, &observer);
     ros::Subscriber subMotion = nh.subscribe("/motionplanner/response",1000,&Observer::callbackMotion, &observer);
     std::string userIn = "start";
 
@@ -54,11 +55,11 @@ bool Observer::updateControls(){
     int bestID = std::numeric_limits<int>::max(); double bestDist = std::numeric_limits<double>::max(); int bestIt = std::numeric_limits<int>::max();
     for(int it = 0; it!=path.tra.size(); it++){
         for(int i = 0; i!=path.tra[it].x.size(); i++){
-            double di = sqrt( pow(carPose[0]-(path.tra[it].x[i]),2) + pow(carPose[1]-(path.tra[it].y[i]),2));
+            double di = sqrt( pow(carState[0]-(path.tra[it].x[i]),2) + pow(carState[1]-(path.tra[it].y[i]),2));
             if (di<bestDist){
                 bestDist = di;  bestID = i;  bestIt = it;
             }else{
-                break;
+                // break;
             }
         }
     }
@@ -68,8 +69,12 @@ bool Observer::updateControls(){
     // Get controls for best ID
     cout<<"best tra: "<<bestIt<<", bestid="<<bestID<<endl;
     if (bestID!=std::numeric_limits<int>::max()){
-        a_cmd = path.tra[bestIt].a_cmd[bestID];
+        // a_cmd = path.tra[bestIt].a_cmd[bestID];
         d_cmd = path.tra[bestIt].d_cmd[bestID];
+        v_cmd = path.tra[bestIt].v[bestID];
+        double v_error = v_cmd-carState[4];
+        double Kp = 5;
+        a_cmd = std::min(std::max(double(-1),Kp*v_error),double(1));
         return true;
     }else{
         return false;
@@ -87,9 +92,9 @@ prius_msgs::Control Observer::genMoveMsg(){
     msg.header.frame_id = ' ';
     if (a_cmd>0){
         msg.brake = 0;
-        msg.throttle = a_cmd/amax;
+        msg.throttle = a_cmd;
     }else if (a_cmd<0){
-        msg.brake = a_cmd/amin;
+        msg.brake = a_cmd;
         msg.throttle = 0;
     }else{
         msg.brake = 0;
@@ -115,10 +120,8 @@ prius_msgs::Control Observer::genStaticMsg(){
 }
 
 
-void Observer::callbackState(const geometry_msgs::PoseWithCovarianceStamped& msg){
-    double theta = convertQuaternionToEuler(msg.pose.pose.orientation);
-    vector<double> CarPose{msg.pose.pose.position.x,msg.pose.pose.position.y,theta};
-    carPose=CarPose;
+void Observer::callbackState(const car_msgs::State& msg){
+    carState=msg.state;
     // ROS_INFO_STREAM("Updated vehicle state.");
     return;
 }
