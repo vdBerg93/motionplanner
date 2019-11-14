@@ -78,6 +78,8 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
     if (!GB){
         double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
         Lp = Lp + Dgoal;
+	}else{
+		Lp -= 2;
 	}
 	
      
@@ -85,7 +87,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double Daccel = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
 	double Dcoast = vmax*tmin;
 	double Dbrake = (pow(vend,2)-pow(vmax,2))/(2*a_dec);
-	double a2{-0.0252}, a1{1.2344}, a0{-0.5347};
+	// double a2{-0.0252}, a1{1.2344}, a0{-0.5347};
 	// double Dctrl = a2*pow(vmax,2) + a1*vmax +a0;
 	double D_vmax_bool = (Daccel + Dcoast + Dbrake)<Lp;
     

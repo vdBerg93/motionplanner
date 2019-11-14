@@ -51,10 +51,10 @@ bool Observer::publishControls(){
 
 bool Observer::updateControls(){
     // Loop through the motion plan and find the waypoint
-    int bestID = std::numeric_limits<int>::max(); double bestDist = std::numeric_limits<double>::max(); auto bestIt = path.tra.begin();
-    for(auto it = path.tra.begin(); it!=path.tra.end(); ++it){
-        for(int i = 0; i!=it->v.size(); i++){
-            double di = sqrt( pow(carPose[0]-(it->x[i]),2) + pow(carPose[1]-(it->y[i]),2));
+    int bestID = std::numeric_limits<int>::max(); double bestDist = std::numeric_limits<double>::max(); int bestIt = std::numeric_limits<int>::max();
+    for(int it = 0; it!=path.tra.size(); it++){
+        for(int i = 0; i!=path.tra[it].x.size(); i++){
+            double di = sqrt( pow(carPose[0]-(path.tra[it].x[i]),2) + pow(carPose[1]-(path.tra[it].y[i]),2));
             if (di<bestDist){
                 bestDist = di;  bestID = i;  bestIt = it;
             }else{
@@ -62,10 +62,14 @@ bool Observer::updateControls(){
             }
         }
     }
-    // 
+    if ((bestIt==0)&&(bestID==0)){
+        bestID++;
+    }
+    // Get controls for best ID
+    cout<<"best tra: "<<bestIt<<", bestid="<<bestID<<endl;
     if (bestID!=std::numeric_limits<int>::max()){
-        a_cmd = bestIt->a_cmd[bestID];
-        d_cmd = bestIt->d_cmd[bestID];
+        a_cmd = path.tra[bestIt].a_cmd[bestID];
+        d_cmd = path.tra[bestIt].d_cmd[bestID];
         return true;
     }else{
         return false;
@@ -74,13 +78,26 @@ bool Observer::updateControls(){
 
 
 prius_msgs::Control Observer::genMoveMsg(){
+    double amax = 2;
+    double amin = -2;
+    double dmax = 0.54;
     prius_msgs::Control msg;
     msg.header.seq = 0;
     msg.header.stamp = ros::Time::now();
     msg.header.frame_id = ' ';
-    msg.brake = 0;      // [0,1]
-    msg.throttle = 0;   // [0,1]
-    msg.steer = 0;      // [-1,1]
+    if (a_cmd>0){
+        msg.brake = 0;
+        msg.throttle = a_cmd/amax;
+    }else if (a_cmd<0){
+        msg.brake = a_cmd/amin;
+        msg.throttle = 0;
+    }else{
+        msg.brake = 0;
+        msg.throttle = 0;
+    }
+    // msg.brake = 0;      // [0,1]
+    // msg.throttle = 0;   // [0,1]
+    msg.steer = d_cmd/dmax;      // [-1,1]
     msg.FORWARD;
     return msg;
 }

@@ -218,8 +218,8 @@ car_msgs::MotionResponse preparePathMessage(const vector<Path>& path){
 			// tra.delta.push_back(it->tra[i][3]);
 			// tra.v.push_back(it->tra[i][4]);
 			// tra.a.push_back(it->tra[i][5]);
-			tra.a_cmd.push_back(it->tra[i][7]);
-			tra.d_cmd.push_back(it->tra[i][8]);
+			tra.a_cmd.push_back(it->tra[i][8]);
+			tra.d_cmd.push_back(it->tra[i][9]);
 		}
 		resp.tra.push_back(tra);
 	}

@@ -104,7 +104,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
 			double Verror = (x[4]-RRT.goalPose[3]);
-			ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
+			// ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
 			// showVelocityProfile(ref);
 			if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
