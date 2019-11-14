@@ -27,7 +27,7 @@
 		required="true"
 		launch-prefix="xterm -e"
 	/>
-		<!-- Start the control node -->
+	<!-- Start the control node -->
 	<node
 		pkg="control"
 		type="control_node"
@@ -35,6 +35,14 @@
 		respawn="true"
 		output="screen"
 		launch-prefix="xterm -e"
+	/>
+	<!-- State estimator node -->
+	<node
+		pkg="state_estimator"
+		type="state_estimator_node"
+		name="state_estimator_node"
+		respawn="true"
+		output="log"
 	/>
 	<!-- Start the simulation -->
 	<include file="$(find car_simulation)/launch/simulation.launch">

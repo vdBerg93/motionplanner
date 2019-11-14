@@ -11,6 +11,12 @@ void MotionPlanner::updateState(car_msgs::State msg){
 	state.insert(state.begin(), msg.state.begin(), msg.state.end());
 	assert(state.size()==6);
 }
+// void MotionPlanner::updateState(geometry_msgs::PoseWithCovarianceStamped input){
+//     vector<double> state = {input.pose.pose.position.x,input.pose.pose.position.y,convertQuaternionToEuler(input.pose.pose.orientation)};
+//     carPose=state;
+// }
+
+
 
 // Print a path to the terminal
 void showPath(const vector<Path>& path){
@@ -93,7 +99,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	plan = convertNodesToPath(bestNodes);
 	plan.insert(plan.begin(), motionplan.begin(), motionplan.end());
 
-
+	publishPathToRviz(plan,pubPtr);	
 	if(Tp<Tcommit){
 		commit = getCommittedPath(bestNodes, Tp);
 	}else{
@@ -112,7 +118,6 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		publishPlan(plan); // Publish committed part and add to motion plan
 	}
 	
-	publishPathToRviz(plan,pubPtr);	
 	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
@@ -125,7 +130,7 @@ visualization_msgs::Marker clearMessage(){
     msg.action = visualization_msgs::Marker::DELETEALL;
 }
 
-// Message for publishing a path to Rviz
+// Message for publishing a path to Rviz (WORLD COORIDNATES)
 visualization_msgs::Marker generateMessage(const vector<Path>& path){
 // Initialize marker message
     visualization_msgs::Marker msg;

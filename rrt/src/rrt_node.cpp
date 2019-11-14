@@ -99,6 +99,7 @@ int main( int argc, char** argv ){
 	motionPlanner.pubPlan = &pubPlan;
 	// State subscriber
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
+	// ros::Subscriber subState = nh.subscribe("/amcl_pose",1,&MotionPlanner::updateState, &motionPlanner);
 
 	// Register client for obstacle detector
 	ros::ServiceClient client = nh.serviceClient<car_msgs::getobstacles>("getobstacles");
@@ -106,8 +107,6 @@ int main( int argc, char** argv ){
 
 	// Give control to ROS
 	cout<<"RRT Node running..."<<endl;
-	while(ros::ok()){
-		ros::spin();
-	}
+	ros::spin();
 }
 

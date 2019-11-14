@@ -13,6 +13,7 @@ using namespace std;
 #include <geometry_msgs/Quaternion.h>
 // Include motion planner message
 #include "car_msgs/MotionRequest.h"
+#include "car_msgs/State.h"
 #include "car_msgs/MotionResponse.h"
 
 #include "functions.cpp"
@@ -24,7 +25,7 @@ int main( int argc, char** argv ){
     // Initialize communication class
     MsgManager msgManager;
     // Initialize message subscribers
-    ros::Subscriber subState = nh.subscribe("/amcl_pose",1000,&MsgManager::stateCallback, &msgManager);
+    ros::Subscriber subState = nh.subscribe("/carstate",1000,&MsgManager::stateCallback, &msgManager);
     ros::Subscriber subGoal = nh.subscribe("/move_base_simple/goal",1000,&MsgManager::goalCallback, &msgManager);
     ros::Subscriber subMP = nh.subscribe("/motionplanner/response",1000,&MsgManager::motionCallback, &msgManager);
     // Initialize message publishers
@@ -35,7 +36,7 @@ int main( int argc, char** argv ){
     
     while (ros::ok()){
         if (msgManager.goalReceived){
-            sendMotionRequest(msgManager.ptrPubMP, msgManager.goalC, msgManager.Vmax);
+            msgManager.sendMotionRequest();
             // cout<<"Press any key to continue to next iteration"<<endl;
             // cin.get();
         }else{
