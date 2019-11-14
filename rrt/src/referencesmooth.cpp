@@ -114,45 +114,50 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	Dbrake = max(double(0), ( pow(vend,2)-pow(Vcoast,2))/(2*a_dec));
 	Dcoast = max(double(0),Lp-Daccel-Dbrake);
 
-	/***************************************
-	Linear interpolation
-	****************************************/
-    double tacc = (Vcoast-v0)/a_acc;
-    double tcoast = Dcoast/Vcoast;
-    double tbrake = (vend-Vcoast)/a_dec;
+	// Cubic polynomial interpolation
+	double astart = 0;
+	double vstart = v0+0.1;
+	if (v0<=0.5){
+		astart = 5;
+	}
+	ROS_WARN_STREAM_THROTTLE(1,"in ref: make acceleration sim dependent");
+	vector<double> coef_acc = getCoefficients(Daccel,vstart,Vcoast,astart,0);
+	vector<double> coef_brake = getCoefficients(Dbrake,Vcoast,goal[3],0,0);
+	int Nacc = (Daccel/res)+1; double t_acc = 0; double dt_acc = double(1)/double(Nacc-1);
+	int Nbrake = (Dbrake/res)+1; double t_brake = 0; double dt_brake = double(1)/double(Nbrake-1);
 	for(int i = 0; i!=ref.x.size(); i++){
         double D = i*res;
         if(D<Daccel){
-            double t1 = -(v0 - sqrt(pow(v0,2) + 2*a_acc*D))/a_acc;
-			// double t1 = -(v0 - (v0^2 + 2*a_acc*D)^(1/2))/a_acc;
-            double t2 = -(v0 + sqrt(pow(v0,2) + 2*a_acc*D))/a_acc;
-			// double t2 = -(v0 + (v0^2 + 2*a_acc*D)^(1/2))/a_acc;
-            double t = (t1>=0)*t1+(t2>=0)*t2;
-            ref.v.push_back(v0+a_acc*t);
+			// if (t_acc>1){ROS_WARN_STREAM("Constraining t_acc");}
+			t_acc = t_acc*(t_acc<=1) + (t_acc>0);
+			double v = getVelocity(vstart,coef_acc,t_acc);
+			// cout<<"accelerate with t="<<t_acc<<", v="<<v<<endl;
+			ref.v.push_back(v);
+			t_acc += dt_acc;
         }else if (D<=(Daccel+Dcoast)){
             ref.v.push_back(Vcoast);
 		}else{
-            double t1 = -(Vcoast + sqrt(pow(Vcoast,2) + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec))/a_dec;
-			// double t1 = -(Vcoast + (Vcoast^2 + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec)^(1/2))/a_dec;
-            double t2 = -(Vcoast - sqrt(pow(Vcoast,2) + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec))/a_dec;
-			// double t2 = -(Vcoast - (Vcoast^2 + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec)^(1/2))/a_dec;
-            double dt = (t1!=tbrake)*(t1>=0)*(t1<=tbrake)*t1+(t2>=0)*(t2<=tbrake)*t2;
-            ref.v.push_back( max(double(0),Vcoast+a_dec*dt));
+			// if (t_brake>1){ROS_WARN_STREAM("Constraining t_brake");}
+			t_brake = t_brake*(t_brake<=1) + (t_brake>0);
+			double v = getVelocity(Vcoast,coef_brake,t_brake);
+			// cout<<"braking with t="<<t_brake<<", v="<<v<<endl;
+            ref.v.push_back(v);
+			t_brake += dt_brake;
         }
     }
-	ref.v.front()+=0.1; // Initialize with small velocity to get car moving
 	// For debugging
-	double Dtotal = Daccel+Dbrake+Dcoast;
-    if (Dtotal<Lp){
-		ROS_WARN_STREAM("Velocity profile is too small!");
-		cout<<"IDwp="<<IDwp<<endl;
-		cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
-		cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
-		cout<<"Vcoast = "<<Vcoast<<endl;
-	}
+	// double Dtotal = Daccel+Dbrake+Dcoast;
+    // if (Dtotal<Lp){
+	// 	ROS_WARN_STREAM("Velocity profile is too small!");
+	// 	cout<<"IDwp="<<IDwp<<endl;
+	// 	cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
+	// 	cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
+	// 	cout<<"Vcoast = "<<Vcoast<<endl;
+	// }
 	assert(ref.v.size()==ref.x.size());
 }
 
+// Print velocity profile in terminal
 void showVelocityProfile(const MyReference& ref){
 	cout<<endl<<"---Reference---"<<endl;
 	cout<<"x = ["<<ref.x.front()<<", "<<ref.x.back()<<"]"<<endl;
@@ -164,6 +169,25 @@ void showVelocityProfile(const MyReference& ref){
 	}
 	cout<<endl<<endl;
 }
+
+// Get coefficients of cubic polynomial for velocity interpolation
+vector<double> getCoefficients(const double& Sf, const double& v0, const double& vf, const double& a0, const double& af){
+	double a = a0;
+    double tf = 1;
+    double c = (2*v0 - 2*vf + a0*tf + af*tf)/ pow(tf,3);
+    double b = -(3*c*pow(tf,2) + a0 - af)/(2*tf);
+	vector<double> coef{a,b,c};
+	// cout<<"Coef: "<<a<<", "<<b<<", "<<c<<endl;
+	return coef;
+}
+
+// Evaluate cubic polynomial representing the velocity profile
+double getVelocity(const double& v0, const vector<double>& coef, const double& t){
+	assert(coef.size()==3);
+	double v = v0 + coef[0]*t + coef[1]*pow(t,2) + coef[2]*pow(t,3);
+	return v;
+}
+
 
 // void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend){
 // 	//// start generation of profile

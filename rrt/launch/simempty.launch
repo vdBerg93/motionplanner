@@ -8,8 +8,7 @@
 		name="pcl_converter_node"
 		respawn="true"
 		respawn_delay="2"
-		output="screen"
-		launch-prefix="xterm -e"
+		output="log"
 	/>
 	<!-- Start the RRT planner node -->
 	<node
@@ -26,6 +25,15 @@
 		name="mission_planner_node"
 		output="screen"
 		required="true"
+		launch-prefix="xterm -e"
+	/>
+	<!-- Start the control node -->
+	<node
+		pkg="control"
+		type="control_node"
+		name="control_node"
+		respawn="true"
+		output="screen"
 		launch-prefix="xterm -e"
 	/>
 	<!-- Start the simulation -->

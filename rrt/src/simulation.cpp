@@ -40,6 +40,7 @@ Simulation::Simulation(const MyRRT& RRT, const vector<double>& state, MyReferenc
 	stateArray.back()[7] = control.IDwp;		// Add waypoint ID in stateArray
 	if (genProfile){
 		generateVelocityProfile(ref,control.IDwp,state[4],vmax,RRT.goalPose,GoalBiased);
+
 	}
 	propagate(RRT, control,ref,veh);			// Predict vehicle trajectory
 };
@@ -51,20 +52,8 @@ double getDistToLane(const double& x, const double& y, double S, const vector<do
 }
 
 void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReference& ref, const Vehicle& veh){
-	// int w1 = 160; int w2 = 80; int wc = 2;
 	int Wlane = 1;
 	int Wcurv = 4000;
-	if(draw_states){
-		cout<<"-------------------------------------------------------------"<<endl;
-		cout<<"reference size= "<<ref.x.size()<<endl;
-		cout<<"[ "<<ref.x.front()<<" -> "<<ref.x.back()<<" ]"<<endl;
-		cout<<"[ "<<ref.y.front()<<" -> "<<ref.y.back()<<" ]"<<endl;
-		cout<<"-------------------------------------------------------------"<<endl;
-	}
-	if ((ref.v.back()<-100)||(ref.v.back()>100)){
-		showVelocityProfile(ref);
-		sleep(100);
-	}
 	
 	for(int i = 0; i<(20/sim_dt); i++){
 		sim_count++;
@@ -73,11 +62,11 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		state_type dx = VehicleODE(ctrlCmd, x, veh);				// Get vehicle state transition
 		IntegrateEuler(ctrlCmd, x, dx, sim_dt, veh);				// Get new state
 		x[7] = control.IDwp;									// Add waypoint ID to vehicle state
-		x.push_back(ctrlCmd.ac);		// Control logging
-		x.push_back(ctrlCmd.dc);		// Control logging
+		x[8] = ctrlCmd.ac;		// Control logging
+		x[9] = ctrlCmd.dc;		// Control logging
 		stateArray.push_back(x);									// Add state to statearray
 		// costE = costE + x[4]*sim_dt; 								// Update cost estimate for exploration
-		costE += sim_dt;
+		costE += x[4]*sim_dt;
 		double kappa = tan(x[3])/veh.L;								// Calculate vehicle path curvature
 		if (RRT.bend){
 			ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
@@ -88,17 +77,14 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			// 		wc*Dgoallane;
 			costS += Dgoallane;
 		}else{
-			// costS += sim_dt + 10*kappa;
-			// costS += x[4]*sim_dt;
-			// costS += sim_dt + 0.2*kappa;
-			costS += sim_dt + 100*kappa;
+			costS += x[4]*sim_dt+ 0.1*abs(kappa);
 		}
 
 		// Check acceleration limits
 		double ay = abs(x[4]*dx[2]);
-		ROS_WARN_STREAM_THROTTLE(2,"Max road lateral acceleration: "<<ay_road_max);
+		// ROS_INFO_STREAM_THROTTLE(2,"Max road lateral acceleration: "<<ay_road_max);
 		if ( ay + ay_road_max> 3){
-			if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3]);}
+			// if(debug_sim){	ROS_WARN_STREAM("Acceleration exceeded! "<<ay<<" m/s2 , delta="<<x[3]);}
 			endReached = false; fail_acclimit++;
 			return;
 		}
@@ -108,8 +94,8 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double Verror = (x[4]-ref.v.back());
-		if (control.endreached&&(Verror<0.1)){
-			if(debug_sim){	ROS_INFO_STREAM("end reached");}
+		if (control.endreached){
+			// if(debug_sim){	ROS_INFO_STREAM("end reached");}
 			endReached = true; return;
 		}
 		// Stop simulation if goal is reached
@@ -118,15 +104,20 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
 			double Verror = (x[4]-RRT.goalPose[3]);
-			// ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
+			ROS_WARN_STREAM("Near goal! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
 			// showVelocityProfile(ref);
 			if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
 				goalReached = true; return;
 			}
 		}
+		if (draw_states){
+			// cout<<"x="<<x[0]<<", y="<<x[1]<<", ac="<<ctrlCmd.ac<<", a="<<x[5]<<", v="<<x[4]<<endl;
+		}
 	}	
+
 	// cout<<"IDwp="<<control.IDwp<<"max ID="<<(ref.x.size()-1)<<"verror="<<(stateArray.back()[4]-RRT.goalPose[3])<<endl;
 	// showVelocityProfile(ref);
+	// sleep(10);
 	fail_iterlimit++;
 };

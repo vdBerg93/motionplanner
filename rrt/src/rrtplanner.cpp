@@ -27,7 +27,8 @@ void MyRRT::addInitialNode(const vector<double>& state){
 }
 
 double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
-	carState.push_back(0); carState.push_back(0); assert(carState.size()==8);	// Make sure the state is correct size (add time & IDwp)
+	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
+	// assert(carState.size()==8);	// Make sure the state is correct size (add time & IDwp)
 	double Tp = 0;
 	// If committed path is empty, initialize tree with first node at lookahead point
 	if (path.size()==0){
@@ -94,7 +95,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 		double Lmax = RRT.goalPose[0];
 		sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
 	}else{ 			// Sample around vehicle
-		vector<double> bounds = {0,RRT.goalPose[0]+5,RRT.goalPose[1]-5, RRT.goalPose[1]+5};
+		vector<double> bounds = {0,RRT.goalPose[0]+5,RRT.goalPose[1]-3, RRT.goalPose[1]+3};
 		sample = sampleAroundVehicle(bounds);
 	}
 	signed int dir = 1; // Driving direction variable
@@ -103,11 +104,11 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 	// P2: sort nodes according to total cost (time) to reach the sample 
 	vector<int> sortedNodes; bool node_added = false;
 	double r = static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(1))); 	// Generate random value [0-1]
-	if(r<=((RRT.goalReached*0.3)+(!RRT.goalReached*0.7))){								// Select a heuristic (shifts after goal is reached)
-		sortedNodes = sortNodesExplore(RRT,sample); 		// Sort nodes in increasing Dubins distance to sample
-	}else{														
+	// if(r<=((RRT.goalReached*0.3)+(!RRT.goalReached*0.7))){								// Select a heuristic (shifts after goal is reached)
+	// 	sortedNodes = sortNodesExplore(RRT,sample); 		// Sort nodes in increasing Dubins distance to sample
+	// }else{														
 		sortedNodes = sortNodesOptimize(RRT,sample); 		// Sort nodes on total cost (time) to reach sample
-	}
+	// }
 	// #### NODE EXPANSION ####
 	// Loop through the sorted nodes untill expansion succeeds
 	for(vector<int>::iterator it = sortedNodes.begin(); it != sortedNodes.end(); ++it){		

@@ -57,5 +57,5 @@ struct MotionPlanner{
 
 visualization_msgs::Marker clearMessage();
 visualization_msgs::Marker generateMessage(const vector<Path>& path);
-void publishPath(const vector<Path>& path, ros::Publisher* ptrPub);
+void publishPathToRviz(const vector<Path>& path, ros::Publisher* ptrPub);
 #endif

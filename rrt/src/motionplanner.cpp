@@ -85,38 +85,34 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations"<<endl;
 
 	// Select best path
-	vector<Node> bestPath = extractBestPath(RRT.tree,pubPtr);
+	vector<Node> bestNodes = extractBestPath(RRT.tree,pubPtr);
 	// Stop when tree is empty
-	if(bestPath.size()==0){
-		ROS_ERROR_STREAM("NO SOLUTION FOUND");
-	}
+	if(bestNodes.size()==0){		ROS_ERROR_STREAM("NO SOLUTION FOUND");	}
 	// Select a part to commit here
-	vector<Path> commit;
+	vector<Path> commit, plan;
+	plan = convertNodesToPath(bestNodes);
+	plan.insert(plan.begin(), motionplan.begin(), motionplan.end());
+
+
 	if(Tp<Tcommit){
-		commit = getCommittedPath(bestPath, Tp);
+		commit = getCommittedPath(bestNodes, Tp);
 	}else{
 		ROS_INFO_STREAM("No commitment required.");
 	}
 	if(req.bend){
 			transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);
 			transformPathRoadToCar(commit,req.Cxy, req.Cxs,veh);
+			transformPathRoadToCar(plan,req.Cxy,req.Cxs,veh);
 	}
 	transformPathCarToWorld(motionplan,worldState);
 	transformPathCarToWorld(commit,worldState);
-	// cout<<"---(S) MOTIONPLAN---"<<endl;
-	// showPath(motionplan);
+	transformPathCarToWorld(plan,worldState);
+
 	if(commit.size()>0){
-		publishPlan(commit); // Publish committed part and add to motion plan
+		publishPlan(plan); // Publish committed part and add to motion plan
 	}
 	
-	vector<Path> best = convertNodesToPath(bestPath);
-	if(req.bend){
-			transformPathRoadToCar(best,req.Cxy,req.Cxs,veh);
-	}
-	publishPath(best,pubPtr);
-	transformPathCarToWorld(best,worldState);
-	publishBestPath(best);
-	
+	publishPathToRviz(plan,pubPtr);	
 	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
@@ -161,10 +157,8 @@ visualization_msgs::Marker generateMessage(const vector<Path>& path){
     return msg;    
 }
 
-// Publish a path
-void publishPath(const vector<Path>& path, ros::Publisher* ptrPub){
-	// visualization_msgs::Marker msg = clearMessage();
-	// ptrPub->publish(msg);
+// Publish a path to Rviz
+void publishPathToRviz(const vector<Path>& path, ros::Publisher* ptrPub){
 	visualization_msgs::Marker msg = generateMessage(path);
 	visualization_msgs::MarkerArray msg2; msg2.markers.push_back(msg);
 	ptrPub->publish(msg2);
@@ -220,10 +214,12 @@ car_msgs::MotionResponse preparePathMessage(const vector<Path>& path){
 		for(int i = 0; i<it->tra.size(); i++){
 			tra.x.push_back(it->tra[i][0]);
 			tra.y.push_back(it->tra[i][1]);
-			tra.theta.push_back(it->tra[i][2]);
-			tra.delta.push_back(it->tra[i][3]);
-			tra.v.push_back(it->tra[i][4]);
-			tra.a.push_back(it->tra[i][7]);
+			// tra.theta.push_back(it->tra[i][2]);
+			// tra.delta.push_back(it->tra[i][3]);
+			// tra.v.push_back(it->tra[i][4]);
+			// tra.a.push_back(it->tra[i][5]);
+			tra.a_cmd.push_back(it->tra[i][7]);
+			tra.d_cmd.push_back(it->tra[i][8]);
 		}
 		resp.tra.push_back(tra);
 	}
