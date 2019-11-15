@@ -46,7 +46,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 
 	cout<<"----------------------------------"<<endl<<"Received request, processing..."<<endl;
 	// Update variables
-	Vehicle veh; veh.setTalos();	
+	Vehicle veh; veh.setPrius();	
 	vector<double> worldState = state;
 	vector<double> carPose = transformPoseWorldToCar(worldState);
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
