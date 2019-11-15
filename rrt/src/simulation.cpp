@@ -76,7 +76,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
 		// 		(Dgoallane<Dotherlane)*w2*abs(kappa) + 		// More cost on curvature in next lane
 		// 		wc*Dgoallane;
-		costS += Dgoallane;
+		costS += Dgoallane + 1000*abs(kappa);
 
 		// Check acceleration limits
 		// Alternative: ay = r*u, ay = u^2 *tan(delta)/L
