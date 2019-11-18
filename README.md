@@ -1,5 +1,8 @@
 # ROS Motion Planner Package
 
+## What to do for highway sim:
+* Disable PCL_CONVERTER ground plane filtering
+
 ## To do
 * Make node for state estimation
 * Add function for splitting node into multiple smaller sections
