@@ -27,7 +27,7 @@ void MyRRT::addInitialNode(const vector<double>& state){
 }
 
 double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
-	carState.push_back(0); carState.push_back(0); assert(carState.size()==8);
+	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
 	double Tp = 0;
 	// If committed path is empty, initialize tree with reference at (Dla,0)
 	if (path.size()==0){
@@ -74,6 +74,7 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 
 	return Tp;
 }
+
 // double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
 // 	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
 // 	// assert(carState.size()==8);	// Make sure the state is correct size (add time & IDwp)
