@@ -43,7 +43,6 @@ void MsgManager::motionCallback(car_msgs::MotionResponse resp){
 
 void MsgManager::updateGoalCar(){
     goalC = {goalW[0]-carPose[0],goalW[1]-carPose[1],goalW[2]-carPose[2],goalW[3]};
-    
 }
 
 void MsgManager::sendMotionRequest(){
@@ -55,7 +54,7 @@ void MsgManager::sendMotionRequest(){
     }
     req.vmax = Vmax;
     req.bend = false;
-    cout<<"Goal (map): "<<"["<<goalW[0]<<", "<<goalW[1]<<", "<<goalW[2]<<", "<<goalW[3]<<"]"<<endl;
+    // cout<<"Goal (map): "<<"["<<goalW[0]<<", "<<goalW[1]<<", "<<goalW[2]<<", "<<goalW[3]<<"]"<<endl;
     cout<<"Goal (car): "<<"["<<goalC[0]<<", "<<goalC[1]<<", "<<goalC[2]<<", "<<goalC[3]<<"]"<<endl;
 
     ptrPubMP->publish(req);

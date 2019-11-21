@@ -18,6 +18,14 @@
 		output="screen"
 		required="true"
 	/>
+	<!-- State estimator node -->
+	<node
+		pkg="state_estimator"
+		type="state_estimator_node"
+		name="state_estimator_node"
+		respawn="true"
+		output="log"
+	/>
 	<!-- Start the mission planner -->
 	<node
 		pkg="mission_planner"

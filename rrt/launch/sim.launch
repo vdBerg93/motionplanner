@@ -33,8 +33,7 @@
 		type="control_node"
 		name="control_node"
 		respawn="true"
-		output="screen"
-		launch-prefix="xterm -e"
+		output="log"
 	/>
 	<!-- State estimator node -->
 	<node
@@ -47,7 +46,7 @@
 	<!-- Start the simulation -->
 	<include file="$(find car_simulation)/launch/simulation.launch">
 		<arg name="gazebo_gui" value="false" />
-		<arg name="world_name" value="myworld.world" />
+		<arg name="world_name" value="myworldobs.world" />
 		<arg name="rviz" value="true" />
 	</include>
 </launch>

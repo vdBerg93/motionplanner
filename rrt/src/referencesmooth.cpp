@@ -1,4 +1,3 @@
-
 /* --------------------------------------
 	REFERENCE GENERATION
 ---------------------------------------*/
@@ -33,13 +32,13 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 
 	// Select closest point
 	if( sqrt( pow(P1.x-node.ref.x.back(),2) + pow(P1.y-node.ref.y.back(),2)) < sqrt( pow(P2.x-node.ref.x.back(),2) + pow(P2.y-node.ref.y.back(),2))){
-		Pclose = P1; Pfar = P2; 
+		Pclose = P1; Pfar = P1; 
 	}else{
-		Pclose = P2; Pfar = P1;
+		Pclose = P2; Pfar = P2;
 	}
 	// Extend to account for lookahead distance
-	Pfar.x += Dextend*cos(goalPose[2]);
-	Pfar.y += Dextend*sin(goalPose[2]);
+	Pfar.x += (Dalign+Dextend)*cos(goalPose[2]);
+	Pfar.y += (Dalign+Dextend)*sin(goalPose[2]);
 	
 	// Segment lengths
 	double N1 = round(sqrt( pow(Pclose.x-node.ref.x.back(),2) + pow(Pclose.y-node.ref.y.back(),2))/ref_res)+1;
@@ -85,7 +84,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double Daccel = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
 	double Dcoast = vmax*tmin;
 	double Dbrake = (pow(vend,2)-pow(vmax,2))/(2*a_dec);
-	double a2{-0.0252}, a1{1.2344}, a0{-0.5347};
+	// double a2{-0.0252}, a1{1.2344}, a0{-0.5347};
 	// double Dctrl = a2*pow(vmax,2) + a1*vmax +a0;
 	double D_vmax_bool = (Daccel + Dcoast + Dbrake)<Lp;
     
@@ -117,43 +116,54 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	// Cubic polynomial interpolation
 	double astart = 0;
 	double vstart = v0+0.1;
-	if (v0<=0.5){
-		astart = 5;
-	}
+	// if (v0<=0.5){
+	// 	astart = 5;
+	// }
 	ROS_WARN_STREAM_THROTTLE(1,"in ref: make acceleration sim dependent");
 	vector<double> coef_acc = getCoefficients(Daccel,vstart,Vcoast,astart,0);
 	vector<double> coef_brake = getCoefficients(Dbrake,Vcoast,goal[3],0,0);
+	// Get amount of points in parts of profile
 	int Nacc = (Daccel/res)+1; double t_acc = 0; double dt_acc = double(1)/double(Nacc-1);
 	int Nbrake = (Dbrake/res)+1; double t_brake = 0; double dt_brake = double(1)/double(Nbrake-1);
+	// Get the profile
+	vector<double> Vacc, Vbrake;
+	if (Nacc>1){
+		vector<double> Tacc = getTimeVector(coef_acc,0,v0,0,0,Daccel,Nacc);
+		Vacc = getVelocityVector(v0,coef_acc,Tacc);
+	}else{
+		 Vacc.push_back(v0);
+	}
+	if (Nbrake>1){
+		vector<double> Tbrake = getTimeVector(coef_brake,0,Vcoast,0,0,Dbrake,Nbrake);
+		Vbrake = getVelocityVector(Vcoast,coef_brake,Tbrake);
+	}else{
+		Vbrake.push_back(Vcoast);
+	}
+	assert(Vacc.size()==Nacc); assert(Vbrake.size()==Nbrake);
+
+	auto it_acc = Vacc.begin(); auto it_brake = Vbrake.begin();
+
 	for(int i = 0; i!=ref.x.size(); i++){
         double D = i*res;
         if(D<Daccel){
-			// if (t_acc>1){ROS_WARN_STREAM("Constraining t_acc");}
-			t_acc = t_acc*(t_acc<=1) + (t_acc>0);
-			double v = getVelocity(vstart,coef_acc,t_acc);
-			// cout<<"accelerate with t="<<t_acc<<", v="<<v<<endl;
-			ref.v.push_back(v);
-			t_acc += dt_acc;
+			ref.v.push_back(*it_acc); it_acc++;
         }else if (D<=(Daccel+Dcoast)){
             ref.v.push_back(Vcoast);
 		}else{
-			// if (t_brake>1){ROS_WARN_STREAM("Constraining t_brake");}
-			t_brake = t_brake*(t_brake<=1) + (t_brake>0);
-			double v = getVelocity(Vcoast,coef_brake,t_brake);
-			// cout<<"braking with t="<<t_brake<<", v="<<v<<endl;
-            ref.v.push_back(v);
-			t_brake += dt_brake;
+			ref.v.push_back(*it_brake); it_brake++;
         }
     }
-	// For debugging
-	// double Dtotal = Daccel+Dbrake+Dcoast;
-    // if (Dtotal<Lp){
-	// 	ROS_WARN_STREAM("Velocity profile is too small!");
-	// 	cout<<"IDwp="<<IDwp<<endl;
-	// 	cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
-	// 	cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
-	// 	cout<<"Vcoast = "<<Vcoast<<endl;
-	// }
+
+	if (GB){
+		double Dtotal = Daccel+Dbrake+Dcoast;
+		cout<<"IDwp="<<IDwp<<endl;
+		cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
+		cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
+		cout<<"Vcoast = "<<Vcoast<<endl;
+		if (Dtotal<Lp){
+			ROS_WARN_STREAM("Velocity profile is too small!");
+		}
+	}	
 	assert(ref.v.size()==ref.x.size());
 }
 
@@ -172,100 +182,117 @@ void showVelocityProfile(const MyReference& ref){
 
 // Get coefficients of cubic polynomial for velocity interpolation
 vector<double> getCoefficients(const double& Sf, const double& v0, const double& vf, const double& a0, const double& af){
-	double a = a0;
-    double tf = 1;
-    double c = (2*v0 - 2*vf + a0*tf + af*tf)/ pow(tf,3);
-    double b = -(3*c*pow(tf,2) + a0 - af)/(2*tf);
-	vector<double> coef{a,b,c};
-	// cout<<"Coef: "<<a<<", "<<b<<", "<<c<<endl;
+	// double a = a0;
+    // // double tf = 1;
+	// double tf = (2*Sf)/(v0 + vf);
+    // // double c = (2*v0 - 2*vf + a0*tf + af*tf)/ pow(tf,3);
+	// double c = (2*v0 - 2*vf + a0*tf + af*tf)/pow(tf,3);
+    // // double b = -(3*c*pow(tf,2) + a0 - af)/(2*tf);
+	// double b = -(a0 - af + (3*(2*v0 - 2*vf + a0*tf + af*tf))/tf)/(2*tf);
+	// vector<double> coef{a,b,c,tf};
+	// // cout<<"Coef: "<<a<<", "<<b<<", "<<c<<endl;
+
+    double a = a0;
+    double tf = (2*Sf)/(v0 + vf);
+    double b = -(a0 - af + (3*(2*v0 - 2*vf + a0*tf + af*tf))/tf)/(2*tf);
+    double c = (2*v0 - 2*vf + a0*tf + af*tf)/pow(tf,3);
+	vector<double> coef{a,b,c,tf};
+
+	// Check results
+	double Vend = v0 + a*tf + b*pow(tf,2) + c*pow(tf,3);
+	double Send = v0*tf + 0.5*coef[0]*pow(tf,2) + (1/3)*coef[1]*pow(tf,3) + (1/4)*coef[2]*pow(tf,4);
+	cout<<"v0="<<v0<<"; vf="<<vf<<"; Sf="<<Sf<<"; a0="<<a0<<"; af="<<af<<endl;
+	cout<<"Send="<<Send<<"; Sf="<<Sf<<endl;
+	assert(abs(Send-Sf)<0.1);
+	assert(abs(Vend-vf)<0.05);
+
+
 	return coef;
 }
 
 // Evaluate cubic polynomial representing the velocity profile
 double getVelocity(const double& v0, const vector<double>& coef, const double& t){
-	assert(coef.size()==3);
 	double v = v0 + coef[0]*t + coef[1]*pow(t,2) + coef[2]*pow(t,3);
 	return v;
 }
 
+// Evaluate cubic polynomial representing the velocity profile
+vector<double> getVelocityVector(const double& v0, const vector<double>& coef, const vector<double>& Tpath){
+	vector<double> Vpath;
+	for(auto it = Tpath.begin(); it!=Tpath.end(); ++it){
+		double V = getVelocity(v0,coef,*it);
+		Vpath.push_back(V);
+	}
+	return Vpath;
+}
 
-// void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend){
-// 	//// start generation of profile
-// 	// Slope shape configuration
-// 	double a_acc = 1;	  double a_dec = 1;	  double tmin = 1;   double v0 = _v0;
-// 	// Total reference length
-// 	double Ltotal = sqrt( pow(ref.x.back()-ref.x.front(),2) + pow(ref.y.back()-ref.y.front(),2) ) ;
-// 	double res = Ltotal/(ref.x.size()-1); 		// ref_res of the reference path
-// 	// Total shape length from the first waypoint until end of reference
-// 	double Lp = sqrt( pow(ref.x.back()-ref.x[IDwp],2) +  pow(ref.y.back()-ref.y[IDwp],2) );
-// 	int Np = (Lp/res)+1; int N0 = ref.x.size()-Np;
-// 	// Check whether the maximum velocity can be reached for minimum time tmin
-// 	double D_vmax_acc = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
-// 	double D_vmax_coast = vmax*tmin;
-// 	double D_vmax_brake = (pow(vmax,2)- pow(vend,2))/(2*a_dec);
-// 	// Boolean that states whether Vmax can be reached as coasting velocity
-// 	bool D_vmax_bool = (D_vmax_acc + D_vmax_coast + D_vmax_brake)<Lp;
-// 	double Vcoast;
-// 	if (vend>v0){
-// 		Vcoast = vend;		 	// if end velocity greater than v0
-// 	}else if (D_vmax_bool){    	
-// 		Vcoast = vmax;			// If Vmax can be reached, Vcoast = Vmax
-// 	}else{ 						// Else define as Dacc+Dcoast+Dbrake = D (solved in MATLAB for Vcoast)
-// 		Vcoast = ( sqrt( pow(a_acc,2)*pow(a_dec,2)*pow(tmin,2) + 2*Lp*pow(a_acc,2)*a_dec + pow(a_acc,2)*pow(vend,2) + 2*Lp*a_acc*pow(a_dec,2) + a_acc*a_dec*pow(v0,2) + a_acc*a_dec*pow(vend,2) + pow(a_dec,2)*pow(v0,2)  ) - a_acc*a_dec*tmin)/(a_acc + a_dec);
+// vector<double> getTimeVector(const vector<double>& coef, const double& t0, const double& v0, const double& a0, const double& af, const double& Sf, const int& N){
+// 	double tf = coef[3];
+// 	double res = Sf/(N-1);
+// 	// Generate a lookup table time<->distance that has much higher resolution than the path vector
+// 	vector<double> Theap = LinearSpacedVector(t0,tf,10*N);
+// 	vector<double> Sheap;
+// 	for(auto it = Theap.begin(); it!=Theap.end(); ++it){
+// 		double S = v0*(*it) + 0.5*coef[0]*pow(*it,2) + (1/3)*coef[1]*pow(*it,3) + (1/4)*coef[2]*pow(*it,4);
+// 		Sheap.push_back(S);
 // 	}
-// 	// Calculate profile distances etc
-// 	double D_Vc_accel = ( pow(Vcoast,2)- pow(v0,2))/(2*a_acc); 			// Distance to accelerate to Vcoast
-// 	if(D_Vc_accel<0){
-// 		D_Vc_accel = 0; Vcoast = v0;
-// 	}// Distance check
-// 	double D_Vc_brake = max(double(0), ( pow(Vcoast,2) - pow(vend,2))/(2*a_dec));			// Braking distance
-// 	//Dbrake = -0.0252* (Vcoast,2) + 1.2344*Vcoast -0.5347; 	// Additional braking distance to reduce controller overshoot
-// 	double D_Vc_coast = max( double(0),Lp-D_Vc_accel-D_Vc_brake);					// Coasting distance
-
-// 	///***************************************
-// 	//Linear interpolation
-// 	//****************************************/
-// 	vector<double> vec_acc, vec_brake, vec_coast;
-// 	if (D_Vc_accel!=0){
-// 		vec_acc = LinearSpacedVector(v0,Vcoast,ceil(D_Vc_accel/res)+1);
-// 	}
-// 	if(D_Vc_brake!=0){
-// 		vec_brake = LinearSpacedVector(Vcoast,vend,floor(D_Vc_brake/res)+1);
-// 	}
-// 	if(D_Vc_coast!=0){
-// 		while(vec_coast.size()!=(Np-vec_acc.size()-vec_brake.size()))
-// 		{  	vec_coast.push_back(Vcoast);	}
-// 	}
-// 	ref.v.clear();
-// 	ref.v.insert(ref.v.end(),vec_acc.begin(),vec_acc.end());
-// 	ref.v.insert(ref.v.end(),vec_coast.begin(),vec_coast.end());
-// 	ref.v.insert(ref.v.end(),vec_brake.begin(),vec_brake.end());
-// 	// Append front with initial velocity
-// 	while( ref.v.size()<ref.x.size()){
-// 		ref.v.insert(ref.v.begin(), v0);
-// 	}
-// 	assert(ref.v.size()==ref.x.size());
-
-// 	if(debug_reference)
-// 	{
-// 		cout<<"IDwp="<<IDwp<<",\t Daccel="<<D_Vc_accel<<"\tDcoast="<<D_Vc_coast<<"\tDbrake="<<D_Vc_brake<<"\t Lp="<<Lp<<endl;
-// 		cout<<"Reference path:"<<endl;
-// 		for(vector<double>::iterator it = ref.x.begin(); it!=ref.x.end(); ++it){
-// 			cout<<*it<<"-";
+// 	// Get the path vector and match it to a time of the lookup table
+// 	vector<double> Spath = LinearSpacedVector(0,Sf,N);
+// 	vector<double> Tpath;
+// 	for(auto itp = Spath.begin(); itp!=Spath.end(); ++itp){
+// 		for(int i = 0; i!=Sheap.size(); i++){
+// 			if (abs((*itp)-Sheap[i])<(res/4)){
+// 				Tpath.push_back(Theap[i]);
+// 				break;
+// 			}else if (i==(Sheap.size()-1)){
+// 				cout<<"No solution found!"<<endl;
+// 				cout<<"coef= ["<<coef[0]<<", "<<coef[1]<<", "<<coef[2]<<"]"<<endl;
+// 				cout<<"tf="<<tf<<"; Sf="<<Sf<<endl;
+// 				bool B1 = abs(Sheap.back()-Spath.back())<0.01;
+// 				bool B2 = abs(Theap.back()-tf)<0.01;
+// 				if (B1||B2){
+// 					cout<<"B1="<<B1<<"B2="<<B2<<endl;
+					
+// 				}
+// 				sleep(10);
+// 			}
 // 		}
-// 		cout<<endl;
-// 		for(vector<double>::iterator it = ref.y.begin(); it!=ref.y.end(); ++it){
-// 			cout<<*it<<"-";
-// 		}
-// 		cout<<endl<<"Reference velocity profile:"<<endl;
-// 		// For debugging
-// 		for(vector<double>::iterator it = ref.v.begin(); it!=ref.v.end(); ++it){
-// 			cout<<*it<<"-";
-// 		}
-// 	}	
-	
-// 	if(debug_mode){
-// 		cout<<"Generated velocity profile. "<<endl;
 // 	}
-// 	assert(ref.v.size()==ref.x.size());	
+// 	if(Tpath.size()!=N){
+// 		cout<<"Path size="<<Tpath.size()<<" N="<<N<<endl;
+// 		cout<<"Sheap= ["<<Sheap.front()<<", "<<Sheap.back()<<endl;
+// 		cout<<"Spath= ["<<Spath.front()<<", "<<Spath.back()<<endl;
+// 	}
+// 	assert(Tpath.size()==N);
+// 	return Tpath;
 // }
+
+vector<double> getTimeVector(const vector<double>& coef, const double& t0, const double& v0, const double& a0, const double& af, const double& Sf, const int& N){
+	double tf = coef[3];
+    double res = Sf/N;
+	// Generate a lookup table time<->distance that has much higher resolution than the path vector
+	vector<double>	 Theap = LinearSpacedVector(t0,tf,5*N);
+	vector<double> Sheap;
+	for(int i = 0; i!=Theap.size(); i++){
+		Sheap.push_back(v0*(Theap[i]) + 0.5*coef[0]*pow(Theap[i],2) + (1/3)*coef[1]*pow(Theap[i],3) + (1/4)*coef[2]*pow(Theap[i],4));
+    }
+	assert( abs(Sheap.back()-Sf)<0.01);
+	// Get the path vector and match it to a time of the lookup table
+	vector<double> Spath = LinearSpacedVector(0,Sf,N);
+	vector<double> Tpath;
+	for(int i = 0; i!=Spath.size(); i++){
+		for(int j = 0; j!=Sheap.size(); j++){
+		 	if (abs(Sheap[j]-Spath[i])<res/4){
+				Tpath.push_back(Theap[j]);
+                break;
+			}else if (j==(Sheap.size()-1)){
+				cout<<"Sp="<<Spath[j]<<"; Sh="<<Sheap.back()<<endl;
+
+				assert(j!=(Sheap.size()-1));
+			}
+			
+        }
+    }
+	assert(Tpath.size()==N);
+	return Tpath;
+}

@@ -20,12 +20,38 @@ void MotionPlanner::updateState(car_msgs::State msg){
 
 // Print a path to the terminal
 void showPath(const vector<Path>& path){
-	 for(auto it = path.begin(); it!=path.end(); it++){
-		 cout<<"Refx = ["<<it->ref.x.front()<<", "<<it->ref.x.back()<<"]"<<endl;
-		 cout<<"Refy = ["<<it->ref.y.front()<<", "<<it->ref.y.back()<<"]"<<endl;
-		 cout<<"Trax = ["<<it->tra.front()[0]<<", "<<it->tra.back()[0]<<"]"<<endl;
-		 cout<<"Tray = ["<<it->tra.front()[1]<<", "<<it->tra.back()[1]<<"]"<<endl;
-	 }
+	for(auto it = path.begin(); it!=path.end(); it++){
+		cout<<"Refx = [";
+		for(int i = 0; i!=it->ref.x.size(); i++){
+			cout<<it->ref.x[i]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Refy = [";
+		for(int i = 0; i!=it->ref.y.size(); i++){
+			cout<<it->ref.y[i]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Refv = [";
+		for(int i = 0; i!=it->ref.v.size(); i++){
+			cout<<it->ref.v[i]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Trax = [";
+		for(int i = 0; i!=it->tra.size(); i++){
+			cout<<it->tra[i][0]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Tray = [";
+		for(int i = 0; i!=it->tra.size(); i++){
+			cout<<it->tra[i][1]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Trav = [";
+		for(int i = 0; i!=it->tra.size(); i++){
+			cout<<it->tra[i][4]<<", ";
+		}
+		cout<<"]"<<endl;
+	}
 }
 
 // Print a node to the terminal
@@ -48,7 +74,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// Update variables
 	Vehicle veh; veh.setPrius();	
 	vector<double> worldState = state;
-	vector<double> carPose = transformPoseWorldToCar(worldState);
+	vector<double> carPose = transformStateToLocal(worldState);
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
@@ -73,19 +99,18 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
 		// transformStateCarToRoad(carPose,req.Cxy,veh);
 	}
-
-	// Predict state after tree build
-	vector<double> Xend = carPose;
-
+	showPath(motionplan);
 	// Initialize RRT planner
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	// cout<<"Created tree object"<<endl;
-	double Tp = initializeTree(RRT, veh, motionplan, Xend);
+	double Tp = initializeTree(RRT, veh, motionplan, carPose);
+
 	cout<<"Committed path time= "<<Tp<<endl;
 
 	// Build the tree
 	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
+		cout<<"expanding"<<endl;
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
 	cout<<"Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations"<<endl;
@@ -98,10 +123,11 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	vector<Path> commit, plan;
 	plan = convertNodesToPath(bestNodes);
 	plan.insert(plan.begin(), motionplan.begin(), motionplan.end());
-
-	publishPathToRviz(plan,pubPtr);	
+	
 	if(Tp<Tcommit){
 		commit = getCommittedPath(bestNodes, Tp);
+		showPath(commit);
+		cout<<"Total committed path time: "<<Tp<<" sec"<<endl;
 	}else{
 		ROS_INFO_STREAM("No commitment required.");
 	}
@@ -114,9 +140,9 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	transformPathCarToWorld(commit,worldState);
 	transformPathCarToWorld(plan,worldState);
 
-	if(commit.size()>0){
-		publishPlan(plan); // Publish committed part and add to motion plan
-	}
+	storeCommit(commit);
+	publishPlan(plan); // Publish committed part and add to motion plan
+	publishPathToRviz(plan,pubPtr);	
 	
 	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
@@ -134,7 +160,7 @@ visualization_msgs::Marker clearMessage(){
 visualization_msgs::Marker generateMessage(const vector<Path>& path){
 // Initialize marker message
     visualization_msgs::Marker msg;
-    msg.header.frame_id = "center_laser_link";
+    msg.header.frame_id = "map";
     msg.header.stamp = ros::Time::now();
     msg.ns = "motionplan";
     msg.action = visualization_msgs::Marker::ADD;
@@ -175,14 +201,14 @@ vector<Path> getCommittedPath(vector<Node> bestPath, double& Tp){
 	vector<Path> commit;
 	for(auto it = bestPath.begin(); it!=bestPath.end(); ++it){ 	// Loop through path
 		Path path;		path.ref.dir = it->ref.dir;				// Initialize path
-		for(int j = 1; j!=((*it).tra.size()); ++j){				// Start at second entry to avoid double values in path when merging sections
+		for(int j = 0; j!=((*it).tra.size()); ++j){				// Start at second entry to avoid double values in path when merging sections
 			Tp += sim_dt;										// Update committed time
 			path.tra.push_back(it->tra[j]);						// Add state to committed path
 			int IDwp = it->tra[j][7];						// Add waypoint for committed state
 			path.ref.x.push_back(it->ref.x[IDwp]);				// push back waypoint
 			path.ref.y.push_back(it->ref.y[IDwp]);				// push back waypoint	
 			path.ref.v.push_back(it->ref.v[IDwp]);				// push back waypoint
-			if (((Tp)>=(ctrl_tla + Tcommit))&&(path.ref.x.size()>=3)){		// Path should be at least three points long for controller to work
+			if (((Tp)>=Tcommit)&&(path.ref.x.size()>=3)){		// Path should be at least three points long for controller to work
 				commit.push_back(path);							
 				return commit;
 			}
@@ -216,7 +242,8 @@ car_msgs::MotionResponse preparePathMessage(const vector<Path>& path){
 		resp.ref.push_back(ref);
 		// Prepare trajectory message
 		car_msgs::Trajectory tra;
-		for(int i = 0; i<it->tra.size(); i++){
+		// for(int i = 0; i<it->tra.size(); i++){
+		for(int i = 1; i<it->tra.size(); i++){
 			tra.x.push_back(it->tra[i][0]);
 			tra.y.push_back(it->tra[i][1]);
 			tra.theta.push_back(it->tra[i][2]);
@@ -247,13 +274,7 @@ vector<Path> convertNodesToPath(const vector<Node> &path){
 
 // Publish the motion plan
 void MotionPlanner::publishPlan(const vector<Path>& plan){
-		car_msgs::MotionResponse resp = preparePathMessage(plan);
-		// Push into message
-		if(commit_path){
-			for(auto it = plan.begin(); it!=plan.end(); ++it){
-				motionplan.push_back(*it);
-			}
-		}
+	car_msgs::MotionResponse resp = preparePathMessage(plan);
 	(*pubPlan).publish(resp);
 }
 
@@ -263,6 +284,13 @@ void MotionPlanner::publishBestPath(const vector<Path>& path){
 	(*pubBest).publish(resp);
 }
 
+void MotionPlanner::storeCommit(const vector<Path>& commit){
+	if(commit_path){
+		for(auto it = commit.begin(); it!=commit.end(); ++it){
+			motionplan.push_back(*it);
+		}
+	}
+}
 // 
 
 /**************************************
@@ -407,7 +435,7 @@ void transformStateRoadToCar(state_type& state, const vector<double>& Cxy, const
  ****** POSE TRANSFORMATIONS ***************************
  ******************************************************/
 
-vector<double> transformPoseWorldToCar(const vector<double>& worldState){
+vector<double> transformStateToLocal(const vector<double>& worldState){
 	vector<double> carPose = worldState;
 	carPose[0] = 0; carPose[1] = 0; carPose[2]=0;
 	return carPose;

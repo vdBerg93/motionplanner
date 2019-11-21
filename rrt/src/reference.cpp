@@ -33,13 +33,13 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 
 	// Select closest point
 	if( sqrt( pow(P1.x-node.ref.x.back(),2) + pow(P1.y-node.ref.y.back(),2)) < sqrt( pow(P2.x-node.ref.x.back(),2) + pow(P2.y-node.ref.y.back(),2))){
-		Pclose = P1; Pfar = P2; 
+		Pclose = P1; Pfar = P1; 
 	}else{
-		Pclose = P2; Pfar = P1;
+		Pclose = P2; Pfar = P2;
 	}
 	// Extend to account for lookahead distance
-	Pfar.x += Dextend*cos(goalPose[2]);
-	Pfar.y += Dextend*sin(goalPose[2]);
+	Pfar.x += (Dextend+Dalign)*cos(goalPose[2]);
+	Pfar.y += (Dextend+Dalign)*sin(goalPose[2]);
 	
 	// Segment lengths
 	double N1 = round(sqrt( pow(Pclose.x-node.ref.x.back(),2) + pow(Pclose.y-node.ref.y.back(),2))/ref_res)+1;
@@ -142,7 +142,10 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
             ref.v.push_back( max(double(0),Vcoast+a_dec*dt));
         }
     }
-	ref.v.front()+=0.1; // Initialize with small velocity to get car moving
+	// for(int i = 0; i!=3; i++){
+	// 	ref.v[i]+=0.1;
+	// }
+	// ref.v.front() = std::max(0.1,ref.v.front());
 	// For debugging
 	double Dtotal = Daccel+Dbrake+Dcoast;
     // if (Dtotal<Lp){

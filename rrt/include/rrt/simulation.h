@@ -15,7 +15,8 @@ class Simulation{
 		double costS, costE;
 		
 		bool goalReached, endReached;
-		Simulation(const MyRRT& RRT,  const vector<double>& state, MyReference& ref, const Vehicle& veh, bool GoalBiased, bool genProfile);
+		Simulation(	const MyRRT& RRT, const vector<double>& state, MyReference& ref, const Vehicle& veh, 
+				   	const bool& GoalBiased, const bool& genProfile, const double& Vstart);
 		bool isvalid();
 };
 bool Simulation::isvalid()

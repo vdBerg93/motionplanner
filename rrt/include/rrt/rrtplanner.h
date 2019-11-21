@@ -88,6 +88,10 @@ void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& ID
 MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir);
 vector<double> getCoefficients(const double& Sf, const double& v0, const double& vf, const double& a0, const double& af);
 double getVelocity(const double& v0, const vector<double>& coef, const double& t);
+vector<double> getVelocityVector(const double& v0, const vector<double>& coef, const vector<double>& Tpath);
+vector<double> getTimeVector(const vector<double>& coef, const double& t0, const double& v0, const double& a0, const double& af, const double& Sf, const int& N);
+void showVelocityProfile(const MyReference& ref);
+
 
 /* ----------------------------------------
         SIMPLE DATA OPERATIONS

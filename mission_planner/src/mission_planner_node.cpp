@@ -33,16 +33,23 @@ int main( int argc, char** argv ){
     msgManager.ptrPubMP = &pubMP;
     ros::Rate rate(5);
     // Give control to ROS for goal definition
+    bool doReplanning;
+    ros::param::get("/motionplanner/replan",doReplanning);
     
     while (ros::ok()){
         if (msgManager.goalReceived){
             msgManager.sendMotionRequest();
             // cout<<"Press any key to continue to next iteration"<<endl;
             // cin.get();
+            if (!doReplanning){
+                sleep(10000);
+            }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }
 
         ros::spinOnce();
+        rate.sleep();
+        
     }
 }

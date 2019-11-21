@@ -43,6 +43,10 @@ void getOBB(const pcl::PointCloud<pcl::PointXYZ> &cloud_cluster, car_msgs::Obsta
 	obs.obb.center.theta = heading;
 	obs.obb.size_x = dxMax-dxMin;
 	obs.obb.size_y = dyMax-dyMin;
+
+	// Add safety margins
+	obs.obb.size_x += 0.3;
+	obs.obb.size_y += 0.3;
 	return;
 };
 

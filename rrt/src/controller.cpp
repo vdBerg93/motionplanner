@@ -61,6 +61,9 @@ void Controller::updateWaypoint(const MyReference& ref, const state_type& x){
     if (IDwp>=ref.x.size()-3){
         endreached = 1;
     };
+    if ((ref.x[IDwp]==ref.x.back())&&(ref.y[IDwp]==ref.y.back())){
+        endreached = 1;
+    }
 };
 
 double getLateralError(const MyReference &ref, const state_type &x, const int& IDwp,const geometry_msgs::Point& Ppreview){

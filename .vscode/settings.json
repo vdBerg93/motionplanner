@@ -16,6 +16,8 @@
         "hash_map": "cpp",
         "hash_set": "cpp",
         "initializer_list": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "iostream": "cpp",
+        "cmath": "cpp"
     }
 }

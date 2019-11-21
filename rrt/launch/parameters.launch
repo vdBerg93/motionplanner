@@ -8,5 +8,6 @@
 	<param 	name="ctrl/sampleTime" 	value="0.04"	/>
 	<param 	name="ctrl/Kp"		value="8"	/>
 	<param 	name="ctrl/Ki" 		value="0"	/>
-	<param  name="max_velocity"	value="8"	/>
+	<param  name="max_velocity"	value="5"	/>
+	<param 	name="motionplanner/replan" value="true"/>
 </launch>

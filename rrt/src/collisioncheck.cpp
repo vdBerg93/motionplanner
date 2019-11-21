@@ -34,8 +34,8 @@ bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::
     // Check if the trajectory2d obb separating axis theorem2d obb separating axis theorem collides with obstacles
     
     for(int index = 0; index !=T.size(); index++){
-        double t = T[index][6];
-        // double t = 0;
+        // double t = T[index][6];
+        double t = 0;
         vector<OBB> obstacleVector = getOBBvector(ptrPub,det,t);
         Vector2D vPos(T[index][0]+1.424*cos(T[index][2]),T[index][1]+1.424*sin(T[index][2]));
         ROS_WARN_STREAM_THROTTLE(5,"In CD: Check vehicle dimensions");

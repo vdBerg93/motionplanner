@@ -17,7 +17,8 @@ void transformStateWorldToCar(state_type& state, const state_type& carPose);
 void transformStateCarToRoad(state_type& states, const vector<double>& Cxy, const Vehicle& veh);	
 void transformPathWorldToCar(vector<MyReference>& path, const vector<double>& carPose);
 void transformPathCarToRoad(vector<MyReference>& path,const vector<double>& Cxy, const vector<double>& Cxs);
-vector<double> transformPoseWorldToCar(const vector<double>& worldState);
+// Transform the received global car state to local
+vector<double> transformStateToLocal(const vector<double>& worldState);
 // Transformations from local to world
 void transformPointRoadToCar(double& Xstraight, double& Ystraight,const vector<double>& Cxy, const vector<double>& Cxs);
 void transformPointCarToWorld(double& Xc, double& Yc, const vector<double>& carPose);
@@ -49,6 +50,7 @@ struct MotionPlanner{
 		void updateState(car_msgs::State msg);
 		void publishPlan(const vector<Path>& plan);
 		void publishBestPath(const vector<Path>& path);
+		void storeCommit(const vector<Path>& commit);
 		MotionPlanner(){
 			vector<double> emptystate = {0,0,0,0,0,0};
 			state = emptystate;
