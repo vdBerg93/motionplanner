@@ -99,7 +99,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
 		// transformStateCarToRoad(carPose,req.Cxy,veh);
 	}
-	showPath(motionplan);
+	// showPath(motionplan);
 	// Initialize RRT planner
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	// cout<<"Created tree object"<<endl;
@@ -110,7 +110,6 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// Build the tree
 	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
-		cout<<"expanding"<<endl;
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
 	cout<<"Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations"<<endl;
@@ -126,7 +125,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	
 	if(Tp<Tcommit){
 		commit = getCommittedPath(bestNodes, Tp);
-		showPath(commit);
+		// showPath(commit);
 		cout<<"Total committed path time: "<<Tp<<" sec"<<endl;
 	}else{
 		ROS_INFO_STREAM("No commitment required.");

@@ -7,7 +7,7 @@ bool debug_reference = 0;
 bool draw_states = 0;
 bool debug_sim = 0;
 bool commit_path = true;
-double Tcommit {0.4};
+double Tcommit {1};
 
 // Global variables
 double sim_dt;
@@ -87,15 +87,15 @@ int main( int argc, char** argv ){
 	// Initialize motion planner object that handles services & callbacks
 	MotionPlanner motionPlanner;
 	// Create marker publisher for Rviz
-	ros::Publisher pubMarker = nh.advertise<visualization_msgs::MarkerArray>("tree_markerarray",10);
+	ros::Publisher pubMarker = nh.advertise<visualization_msgs::MarkerArray>("tree_markerarray",1);
 	motionPlanner.pubPtr = &pubMarker; 	// Initialize global pointer to marker publisher
 	// Motion request subscriber
-	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
+	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",0,&MotionPlanner::planMotion, &motionPlanner);
 	// Publisher for best path
-	ros::Publisher pubBest = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",100);
+	ros::Publisher pubBest = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",1);
 	motionPlanner.pubBest = &pubBest;
 	// Publisher for committed path
-	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",100);
+	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",1);
 	motionPlanner.pubPlan = &pubPlan;
 	// State subscriber
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);

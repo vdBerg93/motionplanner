@@ -9,5 +9,5 @@
 	<param 	name="ctrl/Kp"		value="8"	/>
 	<param 	name="ctrl/Ki" 		value="0"	/>
 	<param  name="max_velocity"	value="5"	/>
-	<param 	name="motionplanner/replan" value="true"/>
+	<param 	name="motionplanner/replan" value="0"/>
 </launch>

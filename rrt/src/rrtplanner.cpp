@@ -56,7 +56,9 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 	// If this assertion fails, the path committment is not configured properly
 	if(path.size()==0){
 		ROS_ERROR_STREAM("All nodes were erased. Committed time not configured properly!");
-		assert(path.size()!=0);
+		RRT.addInitialNode(carState);
+		return 0;
+		// assert(path.size()!=0);
 	}
 
 	// Calculate total committed time
@@ -75,67 +77,6 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 	return Tp;
 }
 
-// double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
-// 	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
-// 	// assert(carState.size()==8);	// Make sure the state is correct size (add time & IDwp)
-// 	double Tp = 0;
-// 	// If committed path is empty, initialize tree with first node at lookahead point
-// 	if (path.size()==0){
-// 		RRT.addInitialNode(carState);
-// 		ROS_INFO_STREAM("Initialized empty tree.");
-// 		return Tp;
-// 	}
-
-// 	// See which parts of committed path have been passed and erase these from the pathlist
-// 	// 1. Loop through the segments
-// 	// 2. erase everything behind the car
-// 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
-// 	for(auto it = path.begin(); it!=path.end(); ++it){
-// 		if ((it->tra.back()[0])<0){
-// 			path.erase(it--);
-// 			cout<<"Removed part of plan."<<endl;
-// 		}else{
-// 			for(auto it2 = it->tra.begin(); it2!=it->tra.end(); ++it2){
-// 				if (((*it2)[0])<0){
-// 					it->tra.erase(it2--);
-// 				}
-// 			}
-// 		}
-// 	}
-// 	MyReference refMerged;
-// 	for(auto it = path.begin(); it!=path.end(); ++it){
-// 		refMerged.dir = 1;
-// 		for(int i = 0; i != it->tra.size(); i++){
-// 			refMerged.x.push_back(it->ref.x[i]);
-// 			refMerged.y.push_back(it->ref.y[i]);
-// 			refMerged.v.push_back(it->ref.v[i]);
-// 		}
-// 	}
-// 	Simulation sim(RRT,carState,refMerged,veh,false,false,carState[4]);
-// 	Tp = sim_dt*(sim.stateArray.size()-1);
-
-// 	// // If this assertion fails, the path commitment is not configured properly
-// 	// if (Tp<0.1){
-// 	// 	ROS_ERROR_STREAM("Committed time is less than it takes to plan a path, reconfigure this!");
-// 	// 	assert(Tp>=0.1);
-// 	// }
-
-// 	// Initialize tree
-// 	Node node(sim.stateArray.back(), -1, refMerged, sim.stateArray,0,0,0);
-// 	node.state[6] = Tp;
-// 	RRT.tree.push_back(node);
-// 	cout<<"Initialized tree with last committed reference."<<endl;
-
-// 	// // Calculate total committed time
-// 	// for(auto it = path.begin(); it!=path.end(); ++it){
-// 	// 	for(int j = 1; j<it->tra.size(); j++){
-// 	// 		Tc += sim_dt;
-// 	// 	}
-// 	// }
-// 	return Tp;
-// }
-
-
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const vector<double>& Cxy){;
 	// #### RANDOM SAMPLING: ####
@@ -153,14 +94,13 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 	// P2: sort nodes according to total cost (time) to reach the sample 
 	vector<int> sortedNodes; bool node_added = false;
 	double r = static_cast <double> (rand()) /( static_cast <double> (RAND_MAX/(1))); 	// Generate random value [0-1]
-	// if(r<=((RRT.goalReached*0.3)+(!RRT.goalReached*0.7))){								// Select a heuristic (shifts after goal is reached)
-	// 	sortedNodes = sortNodesExplore(RRT,sample); 		// Sort nodes in increasing Dubins distance to sample
-	// }else{														
+	if(r<=((RRT.goalReached*0.3)+(!RRT.goalReached*0.7))){								// Select a heuristic (shifts after goal is reached)
+		sortedNodes = sortNodesExplore(RRT,sample); 		// Sort nodes in increasing Dubins distance to sample
+	}else{														
 		sortedNodes = sortNodesOptimize(RRT,sample); 		// Sort nodes on total cost (time) to reach sample
-	// }
+	}
 	// #### NODE EXPANSION ####
 	// Loop through the sorted nodes untill expansion succeeds
-	cout<<"regular expansion"<<endl;
 	for(vector<int>::iterator it = sortedNodes.begin(); it != sortedNodes.end(); ++it){		
 		MyReference ref = getReference(sample, RRT.tree[*it], dir);	// Generate a reference path
 		Simulation sim(RRT,RRT.tree[*it].state,ref,veh,false,true,RRT.tree[*it].ref.v.back());					// Do closed-loop prediction
@@ -177,7 +117,6 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 	}; 
 	// #### GOAL BIASED EXPANSION ####
 	// Loop through the added nodes and try a goal expansion
-	cout<<"goal expansion"<<endl;
 	if ( node_added && feasibleGoalBias(RRT) ) { 
 		if(debug_mode){cout<<"Doing goal expansion..."<<endl;}
 		MyReference ref_goal = getGoalReference(veh, RRT.tree.back(), RRT.goalPose);

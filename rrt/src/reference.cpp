@@ -67,33 +67,29 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double vend = goal[3];
 	// Slope shape configuration
 	double a_acc = 1;	double a_dec = -1; 	double tmin = 1;  
-	// Use first three point of reference to determine the resolution
-	double Lpoints = sqrt( pow(ref.x[2]-ref.x[0],2) + pow(ref.y[2]-ref.y[0],2) ) ;
-	double res = Lpoints/2; 		// ref_res of the reference path
-	// Total length from the first waypoint until end of reference
-	// cout<<"IDwp="<<IDwp<<", res="<<res<<endl;
-	// double Lp = (ref.x.size()-IDwp-1)*res;
-	double Lp = (ref.x.size()-IDwp)*res;
-	// double Lp = (ref.x.size()-1)*res;
-    if (!GB){
-        double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
-        Lp = Lp + Dgoal;
-	}else{
-		Lp -= 1;
-	}
 	
-     
+	double Lp, res;
+	if(GB){
+		double Dgoal = sqrt( pow(goal[0]-ref.x.front(),2) + pow(goal[1]-ref.y.front(),2));
+		Lp = Dgoal + ctrl_mindla-0.5;
+		res = Lp/(ref.x.size()-1);
+	}else{
+		double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
+		double Lref = sqrt( pow(ref.x.front()-ref.x.back(),2) + pow(ref.y.front()-ref.y.back(),2));
+		res = Lref/(ref.x.size()-1);
+		Lp = Lref + Dgoal + ctrl_mindla;
+	}
 	// Check if the maximum coasting velocity can be reached for minimum time tmin
 	double Daccel = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
 	double Dcoast = vmax*tmin;
 	double Dbrake = (pow(vend,2)-pow(vmax,2))/(2*a_dec);
 	// double a2{-0.0252}, a1{1.2344}, a0{-0.5347};
 	// double Dctrl = a2*pow(vmax,2) + a1*vmax +a0;
-	double D_vmax_bool = (Daccel + Dcoast + Dbrake)<Lp;
+	bool D_vmax_bool = (Daccel + Dcoast + Dbrake)<Lp;
     
     // Check what kind of velocity profile must be generated
 	double Vcoast;
-	if (vend>v0){
+	if (vend>(v0+0.1)){
 		Vcoast = vend;		 	// if end velocity greater than v0
 	}else if (D_vmax_bool){
 		Vcoast = vmax;			// If Vmax can be reached, Vcoast = Vmax
@@ -135,25 +131,20 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
             ref.v.push_back(Vcoast);
 		}else{
             double t1 = -(Vcoast + sqrt(pow(Vcoast,2) + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec))/a_dec;
-			// double t1 = -(Vcoast + (Vcoast^2 + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec)^(1/2))/a_dec;
             double t2 = -(Vcoast - sqrt(pow(Vcoast,2) + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec))/a_dec;
-			// double t2 = -(Vcoast - (Vcoast^2 + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec)^(1/2))/a_dec;
             double dt = (t1!=tbrake)*(t1>=0)*(t1<=tbrake)*t1+(t2>=0)*(t2<=tbrake)*t2;
             ref.v.push_back( max(double(0),Vcoast+a_dec*dt));
         }
     }
-	// for(int i = 0; i!=3; i++){
-	// 	ref.v[i]+=0.1;
-	// }
-	// ref.v.front() = std::max(0.1,ref.v.front());
 	// For debugging
-	double Dtotal = Daccel+Dbrake+Dcoast;
-    // if (Dtotal<Lp){
-	// 	ROS_WARN_STREAM("Velocity profile is too small!");
+	// double Dtotal = Daccel+Dbrake+Dcoast;
+    // if (abs(Dtotal-Lp)>0.1){
+	// 	ROS_WARN_STREAM("Velocity profile is wrong size!");
 	// 	cout<<"IDwp="<<IDwp<<endl;
 	// 	cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
-	// 	cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
+	// 	cout<<"Lp="<<Lp<<", Dsum"<<Dtotal<<endl;
 	// 	cout<<"Vcoast = "<<Vcoast<<endl;
+	// 	sleep(100);
 	// }
 	assert(ref.v.size()==ref.x.size());
 }
