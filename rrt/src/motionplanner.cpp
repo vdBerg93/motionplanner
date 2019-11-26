@@ -142,7 +142,10 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	transformPathCarToWorld(plan,worldState);
 
 	storeCommit(commit);
-	publishPlan(plan); // Publish committed part and add to motion plan
+	// publishPlan(plan); // Publish committed part and add to motion plan
+	car_msgs::Trajectory msg = generateMPCmessage(plan);
+	pubMPC->publish(msg);
+
 	publishPathToRviz(plan,pubPtr);	
 	
 	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
