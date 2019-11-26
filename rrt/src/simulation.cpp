@@ -112,10 +112,10 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		}
 
 		// Goal reached check
-		if ((dist_to_goal<=1)&&(goal_heading_error<0.1)){
+		if ((dist_to_goal<=2)&&(goal_heading_error<0.1)){
 			double Verror = abs(x[4]-RRT.goalPose[3]);
 			wasNearGoal = true;
-			if (Verror<0.1){
+			if (Verror<0.5){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
 				goalReached = true; return;
 			}
