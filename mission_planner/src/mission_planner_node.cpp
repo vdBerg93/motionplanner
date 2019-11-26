@@ -41,9 +41,9 @@ int main( int argc, char** argv ){
             msgManager.sendMotionRequest();
             // cout<<"Press any key to continue to next iteration"<<endl;
             // cin.get();
-            if (!doReplanning){
-                sleep(10000);
-            }
+            // if (!doReplanning){
+            //     sleep(10000);
+            // }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }

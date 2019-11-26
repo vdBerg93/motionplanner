@@ -110,7 +110,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Committed path time= "<<Tp<<endl;
 
 	// Build the tree
-	Timer timer(1000); int iter = 0;				
+	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
