@@ -3,11 +3,6 @@
 	<include file="$(find rrt)/launch/parameters.launch" />
 	<!--include file="$(find rrt)/launch/remap.launch" -->
 	
-		<remap
-			from="prius"
-			to="prius_old"
-		/>
-	
 	<!-- Start the obstacle detection node -->
 	<node
 		pkg="pcl_converter"
@@ -32,17 +27,8 @@
 		name="mission_planner_node"
 		output="screen"
 		required="true"
-		launch-prefix="xterm -e"
 	/>
 	<!-- Start the control node -->
-	<node
-		pkg="control"
-		type="control_node"
-		name="control_node"
-		respawn="true"
-		output="log"
-
-	/>
 
 	<!-- State estimator node -->
 	<node

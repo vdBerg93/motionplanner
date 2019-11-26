@@ -99,7 +99,7 @@ int main( int argc, char** argv ){
 	motionPlanner.pubPlan = &pubPlan;
 
 	// Path
-	ros::Publisher pubMPC = nh.advertise<car_msgs::MotionResponse>("/path_publisher/path",1);
+	ros::Publisher pubMPC = nh.advertise<car_msgs::Trajectory>("/path_publisher/path",1);
 	motionPlanner.pubMPC = &pubMPC;
 
 	// State subscriber
