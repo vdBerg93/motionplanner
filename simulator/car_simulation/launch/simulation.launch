@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="gazebo_gui" default="false"/>
+	<arg name="rviz" default="true"/>
+	<arg name="world_name" default="lines.world"/>
+
+
+  <include file="$(find car_simulation)/launch/gazebo_world.launch">
+    <arg name="gazebo_gui" value="$(arg gazebo_gui)" />
+    <arg name="world_name" value="$(arg world_name)" />
+  </include>
+
+  <include file="$(find car_simulation)/launch/ros_vehicle.launch">
+    <arg name="rviz" value="$(arg rviz)" />
+  </include>
+
+  <node pkg="cloud_conversions"       type="cloud_conversions_node"       name="cloud_conversions_node"       output="screen" />
+  <node pkg="detection_3d_to_markers" type="detection_3d_to_markers_node" name="detection_3d_to_markers_node" output="screen" />
+
+</launch>

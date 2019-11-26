@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+	<include file="$(find car_simulation)/launch/simulation.launch">
+		<arg name="gazebo_gui" value="true" />
+		<arg name="world_name" value="myworld.world" />
+		<arg name="rviz" value="true" />
+	</include>
+
+</launch>
