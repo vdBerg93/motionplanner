@@ -35,6 +35,7 @@ void transformPoseRoadToCar(double& Xstraight, double& Ystraight, double& Hstrai
 vector<Path> convertNodesToPath(const vector<Node> &path);
 
 vector<Path> getCommittedPath(vector<Node> bestPath, double& Tc);
+car_msgs::Trajectory generateMPCmessage(const vector<Path>& path);
 
 // Motion planner object for handling services, callbacks & clients
 struct MotionPlanner{
@@ -43,6 +44,7 @@ struct MotionPlanner{
 		ros::ServiceClient* clientPtr;			// Pointer to client
 		ros::Publisher* pubPtr; 				// Pointer to Rviz markers
 		ros::Publisher* pubPlan;
+		ros::Publisher* pubMPC;
 		ros::Publisher* pubBest;				// Pointer to response publisher
 		vector<car_msgs::Obstacle2D> det;		// 2D OBB
 		void planMotion(car_msgs::MotionRequest msg);

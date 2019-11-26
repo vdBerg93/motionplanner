@@ -1,3 +1,5 @@
+
+
 // Get updated obstacles from obstacle detection node
 bool MotionPlanner::updateObstacles(){
     car_msgs::getobstacles srv;
@@ -108,7 +110,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Committed path time= "<<Tp<<endl;
 
 	// Build the tree
-	Timer timer(200); int iter = 0;				
+	Timer timer(1000); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
@@ -146,6 +148,26 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
+
+// Prepare motion response message
+car_msgs::Trajectory generateMPCmessage(const vector<Path>& path){
+	car_msgs::Trajectory tra;
+	for(auto it = path.begin(); it!=path.end(); ++it){
+		for(int i = 1; i<it->tra.size(); i++){
+			tra.x.push_back(it->tra[i][0]);
+			tra.y.push_back(it->tra[i][1]);
+			tra.theta.push_back(it->tra[i][2]);
+			tra.delta.push_back(it->tra[i][3]);
+			tra.v.push_back(it->tra[i][4]);
+			tra.a.push_back(it->tra[i][5]);
+			tra.a_cmd.push_back(it->tra[i][8]);
+			tra.d_cmd.push_back(it->tra[i][9]);
+		}
+	}
+	return tra;
+}
+
+
 
 // Message for clearing all markers
 visualization_msgs::Marker clearMessage(){

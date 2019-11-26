@@ -97,6 +97,11 @@ int main( int argc, char** argv ){
 	// Publisher for committed path
 	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",1);
 	motionPlanner.pubPlan = &pubPlan;
+
+	// Path
+	ros::Publisher pubMPC = nh.advertise<car_msgs::MotionResponse>("/path_publisher/path",1);
+	motionPlanner.pubMPC = &pubMPC;
+
 	// State subscriber
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
 	// ros::Subscriber subState = nh.subscribe("/amcl_pose",1,&MotionPlanner::updateState, &motionPlanner);
