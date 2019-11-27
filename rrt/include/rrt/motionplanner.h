@@ -14,6 +14,7 @@ vector<Path> convertNodesToPath(const vector<Node> &path);
 
 vector<Path> getCommittedPath(vector<Node> bestPath, double& Tc);
 car_msgs::Trajectory generateMPCmessage(const vector<Path>& path);
+void filterMPCmessage(car_msgs::Trajectory& msg);
 
 // Motion planner object for handling services, callbacks & clients
 struct MotionPlanner{

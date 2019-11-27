@@ -83,7 +83,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	}else{
 		ay_road_max = 0;
 	}
-	
+	ROS_INFO_STREAM("Doing coordinate transformations");
 	// Get the array of committed motion plans
 	transformPathWorldToCar(motionplan,worldState);
 	// If road parametrization is available, convert motion spec to straightened scenario
@@ -141,6 +141,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	storeCommit(commit);
 	// publishPlan(plan); // Publish committed part and add to motion plan
 	car_msgs::Trajectory msg = generateMPCmessage(plan);
+	filterMPCmessage(msg);
 	pubMPC->publish(msg);
 
 	publishPathToRviz(plan,pubPtr);	
@@ -167,6 +168,27 @@ car_msgs::Trajectory generateMPCmessage(const vector<Path>& path){
 	return tra;
 }
 
+void filterMPCmessage(car_msgs::Trajectory& msg){
+	car_msgs::Trajectory msgFiltered;
+	double interval = 1; // Distance between waypoints
+	double d = 0;
+	for(int i = 1; i!=msg.x.size(); i++){
+		if (d==0){
+			msgFiltered.x.push_back(msg.x[i]);
+			msgFiltered.y.push_back(msg.y[i]);
+			msgFiltered.theta.push_back(msg.theta[i]);
+			msgFiltered.v.push_back(msg.v[i]);
+			msgFiltered.a.push_back(msg.a[i]);
+			msgFiltered.a_cmd.push_back(msg.a_cmd[i]);
+			msgFiltered.d_cmd.push_back(msg.d_cmd[i]);
+		}
+		d += sqrt( pow(msg.x[i]-msg.x[i-1],2) + pow(msg.y[i]-msg.y[i-1],2));
+		if (d>=interval){
+			d=0;
+		}
+	}
+	msg = msgFiltered;
+}
 
 
 // Message for clearing all markers

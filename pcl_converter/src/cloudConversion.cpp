@@ -297,9 +297,10 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 		ROS_WARN_ONCE("IN PCL_CONV PUBLISH: velocity of ego vehicle is fixed");
 		// marker.points[1].x = obsArray[j].obb.center.x + 4*(obsArray[j].vel.linear.x+cos(obsArray[j].obb.center.theta)*33); // Add EGO velocity 33m/s
 		// marker.points[1].y = obsArray[j].obb.center.y + 4*(obsArray[j].vel.linear.y+sin(obsArray[j].obb.center.theta)*33);
-
-		marker.points[1].x = obsArray[j].obb.center.x;
-		marker.points[1].y = obsArray[j].obb.center.y;
+		marker.points[1].x = obsArray[j].obb.center.x + 4*obsArray[j].vel.linear.x; // Add EGO velocity 33m/s
+		marker.points[1].y = obsArray[j].obb.center.y + 4*obsArray[j].vel.linear.y;
+		// marker.points[1].x = obsArray[j].obb.center.x;
+		// marker.points[1].y = obsArray[j].obb.center.y;
 		marker.points[1].z = 0;
 		msg.markers.push_back(marker);
 	}
