@@ -85,8 +85,9 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 		double Lmax = RRT.goalPose[0];
 		sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
 	}else{ 			// Sample around vehicle
-		vector<double> bounds = {0,RRT.goalPose[0]+5,RRT.goalPose[1]-5, RRT.goalPose[1]+5};
-		sample = sampleAroundVehicle(bounds);
+		// vector<double> bounds = {0,RRT.goalPose[0]+5,RRT.goalPose[1]-5, RRT.goalPose[1]+5};
+		// sample = sampleAroundVehicle(bounds);
+		sample = sampleAroundVehicle(RRT.goalPose);
 	}
 	signed int dir = 1; // Driving direction variable
 	// #### SORTING THE NODES ####
@@ -135,10 +136,28 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 };
 
 // Uniform sampling around the vehicle
-geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds){
+// geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds){
+// 	geometry_msgs::Point sample;	
+// 	sample.x = sampleBounds[0] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(sampleBounds[1]-sampleBounds[0])));
+// 	sample.y = sampleBounds[2] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(sampleBounds[3]-sampleBounds[2])));
+// 	if(debug_mode){cout<<"Generated sample: x="<<sample.x<<" y="<<sample.y<<endl;}
+// 	return sample;
+// }
+
+
+// Uniform sampling around the vehicle
+geometry_msgs::Point sampleAroundVehicle(const vector<double> goalPose){
+	double dGoal = sqrt( pow(goalPose[0],2) + pow(goalPose[1],2) );
+	double goalHeading = atan2( goalPose[1], goalPose[0] );
+	double latMin {-5}, latMax{5};
+	
 	geometry_msgs::Point sample;	
-	sample.x = sampleBounds[0] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(sampleBounds[1]-sampleBounds[0])));
-	sample.y = sampleBounds[2] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(sampleBounds[3]-sampleBounds[2])));
+	double rLong = static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(dGoal+10)));
+	double rLat = latMin + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(latMax-latMin)));
+
+	sample.x = rLong*cos(goalHeading) + rLat*cos(goalHeading+pi/2);
+	sample.y = rLong*sin(goalHeading) + rLat*sin(goalHeading+pi/2);
+
 	if(debug_mode){cout<<"Generated sample: x="<<sample.x<<" y="<<sample.y<<endl;}
 	return sample;
 }

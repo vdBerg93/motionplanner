@@ -29,7 +29,7 @@ KalmanFilter::KalmanFilter() {
   int n = 4; // Number of states
   int m = 2; // Number of measurements
 
-  double dt = 0.05; // Time step
+  double dt = double(1)/double(30); // Time step
   // Define system matrices
   Eigen::MatrixXd Ain(n, n); // System dynamics matrix
   Eigen::MatrixXd Cin(m, n); // Output matrix

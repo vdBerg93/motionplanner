@@ -116,7 +116,12 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// Select best path
 	vector<Node> bestNodes = extractBestPath(RRT.tree,pubPtr);
 	// Stop when tree is empty
-	if(bestNodes.size()==0){		ROS_ERROR_STREAM("NO SOLUTION FOUND");	}
+	if(bestNodes.size()==0){		
+		ROS_ERROR_STREAM("NO SOLUTION FOUND.");	
+		transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);
+		transformPathCarToWorld(motionplan,worldState);
+		return;
+	}
 	// Select a part to commit here
 	vector<Path> commit, plan;
 	plan = convertNodesToPath(bestNodes);
