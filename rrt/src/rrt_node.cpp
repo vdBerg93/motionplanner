@@ -6,8 +6,8 @@ bool debug_mode = 0;
 bool debug_reference = 0;
 bool draw_states = 0;
 bool debug_sim = 0;
-bool commit_path = false;
-double Tcommit {1};
+bool commit_path = true;
+double Tcommit {0.5};
 
 // Global variables
 double sim_dt;

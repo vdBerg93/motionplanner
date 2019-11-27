@@ -8,7 +8,6 @@
 		name="pcl_converter_node"
 		respawn="true"
 		respawn_delay="2"
-		output="log"
 	/>
 	<!-- Start the RRT planner node -->
 	<node
@@ -25,7 +24,6 @@
 		name="mission_planner_node"
 		output="screen"
 		required="true"
-		launch-prefix="xterm -e"
 	/>
 	<!-- Start the control node -->
 	<node
@@ -33,7 +31,6 @@
 		type="control_node"
 		name="control_node"
 		respawn="true"
-		output="log"
 	/>
 	<!-- State estimator node -->
 	<node
@@ -41,7 +38,6 @@
 		type="state_estimator_node"
 		name="state_estimator_node"
 		respawn="true"
-		output="log"
 	/>
 	<!-- Start the simulation -->
 	<include file="$(find car_simulation)/launch/simulation.launch">

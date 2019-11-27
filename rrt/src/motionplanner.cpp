@@ -144,7 +144,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	transformPathCarToWorld(plan,worldState);
 
 	storeCommit(commit);
-	// publishPlan(plan); // Publish committed part and add to motion plan
+	publishPlan(plan); // Publish committed part and add to motion plan
 	car_msgs::Trajectory msg = generateMPCmessage(plan);
 	filterMPCmessage(msg);
 	pubMPC->publish(msg);
@@ -222,7 +222,7 @@ visualization_msgs::Marker generateMessage(const vector<Path>& path){
     msg.color.b = 0.0;
     msg.color.g = 1.0;
     msg.color.a = 1.0;
-    msg.lifetime = ros::Duration(5);
+    msg.lifetime = ros::Duration(3600);
     
     geometry_msgs::Point p;
 	for(auto it = path.begin(); it!=path.end(); ++it){

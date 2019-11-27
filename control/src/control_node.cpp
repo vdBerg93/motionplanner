@@ -42,7 +42,7 @@ int main( int argc, char** argv ){
     std::string userIn = "start";
 
     while (ros::ok()){
-        // bool b1 = observer.publishControls();
+        bool b1 = observer.publishControls();
         ros::spinOnce();
         // ROS_INFO_STREAM("Published controls.");
         r.sleep();

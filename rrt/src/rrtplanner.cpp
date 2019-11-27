@@ -366,7 +366,7 @@ visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T
     visualization_msgs::Marker msg;
     msg.header.frame_id = "center_laser_link";
     msg.header.stamp = ros::Time::now();
-    msg.ns = "trajectory";
+    msg.ns = "tree";
 	msg.id = ID;
     msg.action = visualization_msgs::Marker::ADD;
     msg.pose.orientation.w = 1.0;
