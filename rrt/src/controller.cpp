@@ -32,10 +32,11 @@ ControlCommand Controller::getControls(const MyReference& ref, const Vehicle& ve
     ControlCommand C {getSteerCommand(ref, x, veh),getAccelerationCommand(veh, ref, x)};
     return C;
 }
+int LAlong = 2;
 
 double Controller::getAccelerationCommand(const Vehicle& veh, const MyReference& ref, const state_type& x){
-    int LAlong = 2;                         // Look additional x points in front of preview point (else velocity error could be zero)
-    double E = ref.v[IDwp]-x[4];            // Error
+    // int LAlong = 2;                         // Look additional x points in front of preview point (else velocity error could be zero)
+    double E = ref.v[IDwp+LAlong]-x[4];            // Error
     iE = iE + E*sim_dt;                     // Integral error
 
     // Calculate acceleration command and constrain it
@@ -58,7 +59,7 @@ void Controller::updateWaypoint(const MyReference& ref, const state_type& x){
     IDwp = findClosestPoint(ref, Ppreview, IDwp);
 
     // if (IDwp>=(ref.x.size()-2)){
-    if (IDwp>=ref.x.size()-3){
+    if (IDwp>=ref.x.size()-1-LAlong){
         endreached = 1;
     };
     if ((ref.x[IDwp]==ref.x.back())&&(ref.y[IDwp]==ref.y.back())){

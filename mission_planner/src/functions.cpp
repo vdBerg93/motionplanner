@@ -2,6 +2,8 @@ double convertQuaternionToEuler(geometry_msgs::Quaternion input);
 double getGoalVelocity();
 double getSpeedLimit();
 bool waitForConfirmation();
+void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose);
+void transformPoseWorldToCar(vector<double>& state, const vector<double>& carPose);
 // void sendMotionRequest(const ros::Publisher* ptrPubMP, const vector<double>& goal, const double& Vmax);
 
 struct MsgManager{
@@ -13,7 +15,7 @@ struct MsgManager{
     ros::Publisher* ptrPubMP;
     void stateCallback(const car_msgs::State& input);
     void goalCallback(geometry_msgs::PoseStamped input);
-    void motionCallback(car_msgs::MotionResponse resp);
+    // void motionCallback(car_msgs::MotionResponse resp);
     void sendMotionRequest();
     void updateGoalCar();
 };
@@ -37,12 +39,15 @@ void MsgManager::goalCallback(geometry_msgs::PoseStamped input){
     // confirmed = waitForConfirmation();
 }
 
-void MsgManager::motionCallback(car_msgs::MotionResponse resp){
+// void MsgManager::motionCallback(car_msgs::MotionResponse resp){
     
-}
+// }
 
 void MsgManager::updateGoalCar(){
-    goalC = {goalW[0]-carPose[0],goalW[1]-carPose[1],goalW[2]-carPose[2],goalW[3]};
+    goalC = goalW;
+    transformPoseWorldToCar(goalC,carPose);
+    // goalC = {goalW[0]-carPose[0],goalW[1]-carPose[1],goalW[2]-carPose[2],goalW[3]};
+
 }
 
 void MsgManager::sendMotionRequest(){
@@ -95,4 +100,18 @@ double convertQuaternionToEuler(geometry_msgs::Quaternion input){
     double siny_cosp = 2 * (input.w * input.z + input.x * input.y);
     double cosy_cosp = 1 - 2 * (input.y * input.y + input.z * input.z);
     return atan2(siny_cosp, cosy_cosp);
+}
+
+
+
+void transformPoseWorldToCar(vector<double>& state, const vector<double>& carPose){
+	transformPointWorldToCar(state[0],state[1],carPose);
+	state[2] -= carPose[2];
+}
+
+// Homogenous transformation from world to car
+void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose){
+	double Xc = Xw*cos(carPose[2]) - carPose[0]*cos(carPose[2]) - carPose[1]*sin(carPose[2]) + Yw*sin(carPose[2]);
+    double Yc = Yw*cos(carPose[2]) - carPose[1]*cos(carPose[2]) + carPose[0]*sin(carPose[2]) - Xw*sin(carPose[2]);
+	Xw = Xc; Yw = Yc;
 }

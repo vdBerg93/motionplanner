@@ -20,7 +20,12 @@ MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir)
 
 // Generate a goal biased reference
 MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalPose){;
-	double Dextend = ctrl_dla;//+1.2;
+
+	double dla_c = ctrl_mindla - ctrl_tla*ctrl_dlavmin; 
+	double dla_end = std::max(ctrl_mindla,dla_c+ctrl_tla*std::abs(goalPose[3]));
+
+	// double Dextend = ctrl_mindla;//+1.2;
+	double Dextend = dla_end; assert(abs(dla_end-3.2)<0.01);
 	double Dalign = 1;
 	
 	MyReference ref;
@@ -71,7 +76,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double Lp, res;
 	if(GB){
 		double Dgoal = sqrt( pow(goal[0]-ref.x.front(),2) + pow(goal[1]-ref.y.front(),2));
-		Lp = Dgoal + ctrl_mindla-0.5;
+		Lp = Dgoal + ctrl_mindla;
 		res = Lp/(ref.x.size()-1);
 	}else{
 		double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));

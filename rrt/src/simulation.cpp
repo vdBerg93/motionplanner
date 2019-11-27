@@ -103,19 +103,19 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double Verror = (x[4]-ref.v.back());
 		if (control.endreached&&abs(Verror<0.05)){
-			if(wasNearGoal){
-				ROS_WARN_STREAM("Was near goal but did not reach! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
-				ROS_WARN_STREAM("Dist2goal= "<<dist_to_goal<<" head error= "<<goal_heading_error<<" dla= "<<ctrl_dla);
-				showVelocityProfile(ref);
-			}
+			// if(wasNearGoal){
+			// 	ROS_WARN_STREAM("Was near goal but did not reach! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
+			// 	ROS_WARN_STREAM("Dist2goal= "<<dist_to_goal<<" head error= "<<goal_heading_error<<" dla= "<<ctrl_dla);
+			// 	showVelocityProfile(ref);
+			// }
 			endReached = true; return;
 		}
 
 		// Goal reached check
-		if ((dist_to_goal<=2)&&(goal_heading_error<0.1)){
+		if ((dist_to_goal<=1)&&(goal_heading_error<0.05)){
 			double Verror = abs(x[4]-RRT.goalPose[3]);
 			wasNearGoal = true;
-			if (Verror<0.5){
+			if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
 				goalReached = true; return;
 			}
@@ -124,9 +124,9 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			// cout<<"x="<<x[0]<<", y="<<x[1]<<", ac="<<ctrlCmd.ac<<", a="<<x[5]<<", v="<<x[4]<<endl;
 		}
 	}	
-	if(wasNearGoal){
-		ROS_WARN_STREAM("Was near goal but did not reach it!");
-		showVelocityProfile(ref);
-	}
+	// if(wasNearGoal){
+	// 	ROS_WARN_STREAM("Was near goal but did not reach it!");
+	// 	showVelocityProfile(ref);
+	// }
 	fail_iterlimit++;
 };

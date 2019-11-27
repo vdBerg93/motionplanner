@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Tree MarkerArray1
+        - /Tree MarkerArray1/Namespaces1
         - /MarkerArray1
         - /MarkerArray2
       Splitter Ratio: 0.5
@@ -242,8 +243,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 1.470441222190857
-        Min Value: -0.1958014965057373
+        Max Value: 1.4564141035079956
+        Min Value: -0.18837833404541016
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -286,13 +287,14 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: tree_markerarray
       Name: Tree MarkerArray
       Namespaces:
-        {}
+        motionplan: true
+        trajectory: false
       Queue Size: 100
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /robot_collision_space

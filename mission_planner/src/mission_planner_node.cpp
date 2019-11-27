@@ -27,7 +27,7 @@ int main( int argc, char** argv ){
     // Initialize message subscribers
     ros::Subscriber subState = nh.subscribe("/carstate",0,&MsgManager::stateCallback, &msgManager);
     ros::Subscriber subGoal = nh.subscribe("/move_base_simple/goal",1000,&MsgManager::goalCallback, &msgManager);
-    ros::Subscriber subMP = nh.subscribe("/motionplanner/response",0,&MsgManager::motionCallback, &msgManager);
+    // ros::Subscriber subMP = nh.subscribe("/motionplanner/response",0,&MsgManager::motionCallback, &msgManager);
     // Initialize message publishers
     ros::Publisher pubMP = nh.advertise<car_msgs::MotionRequest>("/motionplanner/request",0);
     msgManager.ptrPubMP = &pubMP;

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 	<include file="$(find rrt)/launch/parameters.launch" />
-	<!--include file="$(find rrt)/launch/remap.launch" -->
+	<include file="$(find lmpcc)/launch/lmpcc.launch"/>
 	
 	<!-- Start the obstacle detection node -->
 	<node
