@@ -3,9 +3,9 @@
 --------------------------------------------*/
 #include "rrt/collision.h"
 
-vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const double& t){
+vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const double& t, const vector<double>& carState){
     ROS_WARN_STREAM_THROTTLE(5,"IN CD - getOBBVec: make carstate variable");
-    vector<double> carState = {0,0,0,0,33,0,0};
+    // vector<double> carState = {0,0,0,0,0,0,0};
     
     vector<OBB> obstacleVector;
     for(int i = 0; i!=det.size(); i++){
@@ -21,7 +21,7 @@ vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle
     return obstacleVector;
 }
 
-bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::Obstacle2D>& det){
+bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::Obstacle2D>& det, const vector<double>& carState){
     //return false; // Override collision check
     // Quickly check if trajectory exceeds the domain
     ROS_WARN_ONCE("TODO: In collision, implement domain check!");
@@ -35,8 +35,8 @@ bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::
     
     for(int index = 0; index !=T.size(); index++){
         // double t = T[index][6];
-        double t = 0;
-        vector<OBB> obstacleVector = getOBBvector(ptrPub,det,t);
+        double t = 4;
+        vector<OBB> obstacleVector = getOBBvector(ptrPub,det,t,carState);
         Vector2D vPos(T[index][0]+1.424*cos(T[index][2]),T[index][1]+1.424*sin(T[index][2]));
         ROS_WARN_STREAM_THROTTLE(5,"In CD: Check vehicle dimensions");
         OBB vOBB(vPos,2,4.848,T[index][2]); // Create vehicle OBB
@@ -129,40 +129,3 @@ bool intersects(OBB a, OBB b){
     }
     return true;
 }
-
-
-// void drawObstacles(ros::Publisher* ptrPub,vector<OBB> obstacleVector){
-//     for(int index = 0; index<obstacleVector.size(); index++){
-//         visualization_msgs::Marker msg;
-//         // Initialize marker message
-//         msg.header.frame_id = "map";
-//         msg.header.stamp = ros::Time::now();
-//         msg.ns = "obstacles";
-//         msg.action = visualization_msgs::Marker::ADD;
-//         msg.pose.orientation.w = 1.0;
-//         msg.id = index;
-//         msg.type = visualization_msgs::Marker::POINTS;
-//         msg.scale.x = 1;	// msg/LINE_LIST markers use only the x component of scale, for the line width
-
-//         // Line strip is red
-//         msg.color.r = 1.0;
-//         msg.color.a = 1.0;
-//         msg.lifetime = ros::Duration(10);
-        
-//         geometry_msgs::Point p;// int i = 0;
-//         p.x = obstacleVector[index].verticesX[3];
-//         p.y = obstacleVector[index].verticesY[3];
-//         p.z = 0;
-//         msg.points.push_back(p);
-//         for(int i = 0; i<=3; i++){
-//             p.x = obstacleVector[index].verticesX[i];
-//             p.y = obstacleVector[index].verticesY[i];
-//             p.z = 0;
-//             msg.points.push_back(p);
-//             msg.points.push_back(p);
-//         }
-//         msg.points.erase(msg.points.end());
-//         //msg.points.insert(msg.points.begin(); obstacleVector[index].vertices.back());
-//         ptrPub->publish(msg);
-//     }
-// }

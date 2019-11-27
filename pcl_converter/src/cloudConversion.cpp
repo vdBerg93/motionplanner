@@ -24,6 +24,7 @@ struct Observer{
 	// Publishers
 	ros::Publisher* pubPtr;
 	ros::Publisher* pubRviz;
+	tf::TransformListener* tfListener;
 };
 
 bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp){
@@ -44,13 +45,26 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
 	cout<<"--- Processing new pointcloud ---"<<endl;
   	//#######################################################################
   	//#### Read data and perform segmentation and ground plane removal 
-  	//#######################################################################
-	// 1. CLEAR DETECTIONS
+  	//#######################################################################	
+	// 1. CLEAR DETECTIONSr
 	Obs.clear();
 
 	// Convert ROS message to pcl format 
   	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
   	pcl::fromROSMsg (*input, *cloud);
+
+	pcl::PointCloud<pcl::PointXYZ> pclIn = *cloud;
+
+	bool T = pcl_ros::transformPointCloud("base_link",pclIn, *cloud, *tfListener);
+	
+	// bool succeed = pcl_ros::transformPointCloud("fr_axle", ros::Time::now(), pclIn, "center_laser_link", *cloud, *tfListener);
+	// (target frame, target time, cloud in, fixed frame, cloud out, tf listener)
+	// const ros::Time & 	target_time,
+	// const pcl::PointCloud< PointT > & 	cloud_in,
+	// const std::string & 	fixed_frame,
+	// pcl::PointCloud< PointT > & 	cloud_out,
+	// const tf::TransformListener & 	tf_listener )	
+
 
 	//*****************
 	// GROUND PLANE FILTERING (DISABLED BECAUSE THIS IS NOT INCLUDED ATM)
@@ -64,7 +78,7 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
   	seg.setModelType (pcl::SACMODEL_PLANE);
   	seg.setMethodType (pcl::SAC_RANSAC);
   	seg.setMaxIterations (100);			
-  	seg.setDistanceThreshold (0.3);
+  	seg.setDistanceThreshold (0.2);
 
   	int i=0, nr_points = (int) cloud->points.size ();
   	while (cloud->points.size () > 0.3 * nr_points)
@@ -228,7 +242,7 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 		Vertices vertices(obsArray[j]);
 		visualization_msgs::Marker marker;
 		// Initialize marker message
-		marker.header.frame_id = "center_laser_link";
+		marker.header.frame_id = "base_link";
 		marker.header.stamp = ros::Time::now();
 		marker.ns = "obstacles";
 		marker.action = visualization_msgs::Marker::ADD;
@@ -260,7 +274,7 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 		Vertices vertices(obsArray[j]);
 		visualization_msgs::Marker marker;
 		// Initialize marker message
-		marker.header.frame_id = "center_laser_link";
+		marker.header.frame_id = "base_link";
 		marker.header.stamp = ros::Time::now();
 		marker.ns = "obstacles";
 		marker.action = visualization_msgs::Marker::ADD;

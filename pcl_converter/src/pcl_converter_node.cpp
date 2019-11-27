@@ -10,6 +10,7 @@ bool DEBUG = 0;
 #include "cloudConversion.cpp"
 
 
+
 void testKalman();
 
 //#### MAIN FUNCTION ####################################
@@ -35,6 +36,10 @@ int main (int argc, char** argv)
 
 	// Create service server
 	ros::ServiceServer server = nh.advertiseService("getobstacles", &Observer::callbackService,&ObserveObject);
+
+	// TF listener
+	tf::TransformListener listener;
+	ObserveObject.tfListener = &listener;
 
 	// Create a ROS publisher for the output point cloud
 	// ros::Publisher pub = nh.advertise<car_msgs::getobstaclesResponse>("/pcl_converter_node/detections", 1);

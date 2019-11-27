@@ -189,7 +189,7 @@ visualization_msgs::Marker generateMessage(const vector<Path>& path){
 
     msg.id = 0;
     msg.type = visualization_msgs::Marker::LINE_STRIP;
-    msg.scale.x = 0.3;	// msg/LINE_LIST markers use only the x component of scale, for the line width
+    msg.scale.x = 0.5;	// msg/LINE_LIST markers use only the x component of scale, for the line width
 
     msg.color.r = 0.0;
     msg.color.b = 0.0;

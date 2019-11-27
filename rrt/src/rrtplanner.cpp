@@ -106,7 +106,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 		Simulation sim(RRT,RRT.tree[*it].state,ref,veh,false,true,RRT.tree[*it].ref.v.back());					// Do closed-loop prediction
 		// If trajectory is admissible and collisionfree, add it to the tree
 		if(sim.endReached||sim.goalReached){
-			if (!checkCollision(ptrPub,sim.stateArray,det)){
+			if (!checkCollision(ptrPub,sim.stateArray,det,RRT.tree.front().state)){
 				Node node(sim.stateArray.back(), *it, ref,sim.stateArray, sim.costE + RRT.tree[*it].costE, sim.costS + RRT.tree[*it].costS, sim.goalReached);
 				RRT.addNode(node); 	node_added = true;
 				break;
@@ -124,7 +124,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 		
 		// If trajectory is admissible and collision free, add it to the tree
 		if(sim_goal.endReached||sim_goal.goalReached){
-			if(!checkCollision(ptrPub,sim_goal.stateArray,det)){
+			if(!checkCollision(ptrPub,sim_goal.stateArray,det,RRT.tree.front().state)){
 				Node node_goal(sim_goal.stateArray.back(), RRT.tree.size()-1, ref_goal, sim_goal.stateArray,sim_goal.costE + RRT.tree.back().costE, sim_goal.costS + RRT.tree.back().costS, sim_goal.goalReached);
 				RRT.addNode(node_goal);
 			}else{
@@ -352,7 +352,7 @@ visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T
     msg.action = visualization_msgs::Marker::ADD;
     msg.pose.orientation.w = 1.0;
     msg.type = visualization_msgs::Marker::LINE_STRIP;
-    msg.scale.x = 0.05;	// msg/LINE_LIST markers use only the x component of scale, for the line width
+    msg.scale.x = 0.025;	// msg/LINE_LIST markers use only the x component of scale, for the line width
 	if (goalReached){
 		msg.color.g = 1;
 		msg.color.r = 1;

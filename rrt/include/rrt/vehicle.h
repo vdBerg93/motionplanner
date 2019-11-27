@@ -48,7 +48,7 @@ class Vehicle{
             double lr = 1.6132;     // From specs
             Lrear = 1;              // Guessed, from rear axle to rear bumper
             Lfront = 2.7+0.5;       // Guessed, from rear axle to front bumper
-            w = 1.52;               // From specs
+            w = 2;               // Internet: 1.76m -> round up 2m
             b = lr;                 // From specs
             rho = 5.95;             // From specs
 
