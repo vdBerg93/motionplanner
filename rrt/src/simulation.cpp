@@ -66,7 +66,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		IntegrateEuler(ctrlCmd, x, dx, sim_dt, veh);				// Get new state
 		x[7] = control.IDwp;									// Add waypoint ID to vehicle state
 		// x[8] = ctrlCmd.ac;		// Control logging
-		x[8] = ref.v[control.IDwp];
+		x[8] = ref.v[control.IDwp+LAlong];
 		x[9] = ctrlCmd.dc;		// Control logging
 		stateArray.push_back(x);									// Add state to statearray
 		// costE = costE + x[4]*sim_dt; 								// Update cost estimate for exploration
