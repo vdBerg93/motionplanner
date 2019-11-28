@@ -319,6 +319,7 @@ vision_msgs::Detection2DArray generateMPCmessage(const vector<car_msgs::Obstacle
 	for(int i = 0; i!=obstacles.size(); i++){
 		vision_msgs::Detection2D det;
 		det.bbox = obstacles[i].obb;
+		det.header.frame_id = "base_link";
 		msg.detections.push_back(det);
 	}
 	msg.header.frame_id = "base_link";
