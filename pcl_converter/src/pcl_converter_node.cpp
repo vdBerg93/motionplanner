@@ -11,6 +11,7 @@ bool DEBUG = 0;
 
 
 
+
 void testKalman();
 
 //#### MAIN FUNCTION ####################################
@@ -36,6 +37,10 @@ int main (int argc, char** argv)
 
 	// Create service server
 	ros::ServiceServer server = nh.advertiseService("getobstacles", &Observer::callbackService,&ObserveObject);
+
+	// MPC publisher
+	ros::Publisher pubMPC = nh.advertise<vision_msgs::Detection2DArray>("/detection_2D",100);
+	ObserveObject.pubMPC = &pubMPC;
 
 	// TF listener
 	tf::TransformListener listener;

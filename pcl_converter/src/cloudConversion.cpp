@@ -8,6 +8,8 @@
 #include <tracker.h>
 #include "obb.cpp"
 
+vision_msgs::Detection2DArray generateMPCmessage(const vector<car_msgs::Obstacle2D>& obstacles);
+
 struct Observer{
 	// Obstacle data & Trackers
 	vector<double> laneCxy;
@@ -24,6 +26,7 @@ struct Observer{
 	// Publishers
 	ros::Publisher* pubPtr;
 	ros::Publisher* pubRviz;
+	ros::Publisher* pubMPC;
 	tf::TransformListener* tfListener;
 };
 
@@ -160,6 +163,10 @@ void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input
 		ss << "cloud_cluster_" << j << ".pcd";
 		j++;
   	}
+	// For MPC
+	vision_msgs::Detection2DArray msg = generateMPCmessage(Obs);
+	pubMPC->publish(msg);
+
 	// pubPtr->publish(Obs);
 	// updateTrackers();
 	updateTrackersKF();
@@ -306,3 +313,24 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 	}
 	pubRviz->publish(msg);
 }
+
+vision_msgs::Detection2DArray generateMPCmessage(const vector<car_msgs::Obstacle2D>& obstacles){
+	vision_msgs::Detection2DArray msg;
+	for(int i = 0; i!=obstacles.size(); i++){
+		vision_msgs::Detection2D det;
+		det.bbox = obstacles[i].obb;
+		msg.detections.push_back(det);
+	}
+	msg.header.frame_id = "base_link";
+	msg.header.stamp = ros::Time::now();
+	return msg;
+}
+// vision_msgs::Detection2DArray generateMPCmessage(const vector<car_msgs::Obstacle2D>& obstacles){
+// 	vision_msgs::Detection2DArray msg;
+// 	// for(auto it = obstacles.begin(); it!=obstacles.end(); ++it){
+// 	// 	msg.detections.push_back(it->obb);
+// 	// }
+
+// 	msg.header.frame_id = "base_link";
+// 	return msg;
+// }

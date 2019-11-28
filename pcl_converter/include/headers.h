@@ -46,3 +46,4 @@
 #include <Eigen/Dense>
 
 #include <tf/transform_listener.h>
+#include <vision_msgs/Detection2DArray.h>
