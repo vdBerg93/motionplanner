@@ -112,6 +112,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
 	cout<<"Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations"<<endl;
+	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 
 	// Select best path
 	vector<Node> bestNodes = extractBestPath(RRT.tree,pubPtr);
@@ -150,8 +151,6 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	pubMPC->publish(msg);
 
 	publishPathToRviz(plan,pubPtr);	
-	
-	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
 	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
 }
 
