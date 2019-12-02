@@ -9,6 +9,7 @@ using namespace std;
 #include <cmath>
 
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include "car_msgs/Trajectory.h"
 #include "car_msgs/MotionResponse.h"
 #include "car_msgs/State.h"
 // #include "car_msgs/ControlErrors.h"
@@ -20,7 +21,12 @@ using namespace std;
 double convertQuaternionToEuler(geometry_msgs::Quaternion input);
 double interpolate(const double (&Txval)[3], const double (&Tyval)[3]);
 void transformToVehicle(double (&xval)[3],double (&yval)[3],double (&Txval)[3],double (&Tyval)[3],const double (&x)[3]);
-double getLateralError(const car_msgs::MotionResponse path, const vector<double>& x, const int& IDtr, const int& IDwp);
+double getLateralError(const car_msgs::Trajectory path, const vector<double>& x, const int& IDwp);
+double wrapTo2Pi(double x);
+double wrapToPi(double x);
+
+const bool debug = true;
+const double pi = M_PI;
 
 int main( int argc, char** argv ){	
 	// Initialize node
@@ -38,7 +44,8 @@ int main( int argc, char** argv ){
     Observer observer(&pubControl, &pubError1, &pubError2, &pubError3, &pubError4);
     // Initialize message subscribers
     ros::Subscriber subState = nh.subscribe("/carstate",1000,&Observer::callbackState, &observer);
-    ros::Subscriber subMotion = nh.subscribe("/motionplanner/response",1000,&Observer::callbackMotion, &observer);
+    // ros::Subscriber subMotion = nh.subscribe("/motionplanner/response",1000,&Observer::callbackMotion, &observer);
+    ros::Subscriber subMotion = nh.subscribe("/path_publisher/path",1000,&Observer::callbackMotion, &observer);
     std::string userIn = "start";
 
     while (ros::ok()){
@@ -62,43 +69,85 @@ bool Observer::publishControls(){
 
 bool Observer::updateControls(){
     // Loop through the motion plan and find the waypoint
-    int bestID = std::numeric_limits<int>::max(); double bestDist = std::numeric_limits<double>::max(); int bestIt = std::numeric_limits<int>::max();
-    for(int it = 0; it!=path.tra.size(); it++){
-        for(int i = 0; i!=path.tra[it].x.size(); i++){
-            double di = sqrt( pow(carState[0]-(path.tra[it].x[i]),2) + pow(carState[1]-(path.tra[it].y[i]),2));
-            if (di<bestDist){
-                bestDist = di;  bestID = i;  bestIt = it;
-            }else{
-                // break;
-            }
+    int bestID = std::numeric_limits<int>::max(); double bestDist = std::numeric_limits<double>::max();
+    for(int i = 0; i!=path.x.size(); i++){
+        double di = sqrt( pow(carState[0]-(path.x[i]),2) + pow(carState[1]-(path.y[i]),2));
+        if (di<bestDist){
+            bestDist = di;  bestID = i;
+        }else{
+            // break;
         }
     }
-    
+    if(debug){ cout<<"bestID="<<bestID<<endl;}
+
     // Get controls for best ID
-    cout<<"best tra: "<<bestIt<<", bestid="<<bestID<<endl;
-    if ((bestIt==(path.tra.size()-1))&&(bestID==(path.tra[bestIt].x.size()-1))){
+    if (bestID==(path.x.size()-1)){
+        // Brake when end of reference is reached
         a_cmd = -1;
         d_cmd = 0;
     }else if (bestID!=std::numeric_limits<int>::max()){
         // Longitudinal controller
-        // a_cmd = path.tra[bestIt].a_cmd[bestID];
-        // v_cmd = path.tra[bestIt].v[bestID];
-        v_cmd = path.tra[bestIt].a_cmd[bestID];
+        v_cmd = path.a_cmd[bestID+1];
+        if(debug){cout<<"v_cmd="<<v_cmd<<endl;}
         double v_error = v_cmd-carState[4];
         a_cmd = 0.5*v_error;
         a_cmd = std::min(std::max(double(-1),a_cmd),double(1));
 
-        // Lateral controller
-        d_cmd = path.tra[bestIt].d_cmd[bestID];
-        double y_error = getLateralError(path, carState, bestIt, bestID);
-        // d_cmd = 0.5*y_error + 0.5*(d_cmd-carState[2]);
-        // d_cmd = 2*y_error;
-        d_cmd = std::min(std::max(double(-1),d_cmd),double(1));
-        std_msgs::Float64 msg;
-        msg.data = y_error;         ptrPubError1->publish(msg);
-        msg.data = v_error;         ptrPubError2->publish(msg);
-        msg.data = v_cmd;           ptrPubError3->publish(msg);
-        msg.data = carState[4];     ptrPubError4->publish(msg);
+        // Lateral error calculation
+        double y_error = getLateralError(path, carState, bestID);
+
+        // Path curvature calculation
+        int IDmin;
+        if (bestID==0){
+            IDmin = bestID; 
+        }else if (bestID==(path.x.size()-1)){
+            IDmin = bestID-2;
+        }else{
+            IDmin = bestID-1;
+        }
+    
+            // First order derivative
+        double dy[2];
+        for(int i = 0; i!=2; i++){
+            dy[i] = ( path.y[IDmin+i] - path.y[IDmin+i-1])/ ( path.x[IDmin+i] - path.x[IDmin+i-1]);
+            // dy[i] = ( y(IDmin+i)-y(IDmin+i-1) )/ (x(IDmin+i) - x(IDmin+i-1) );
+        }
+            // Second order derivative
+        double ddy = ( dy[1] - dy[0] )/ (path.x[IDmin+2] - path.x[IDmin]);
+        double slope = (dy[1]-dy[0])/2;
+            // path curvature
+        double kappa = ddy/pow( 1 + pow(slope,2),double(3)/double(2));
+
+        // Heading error calculation
+        double road_heading = atan2(slope,1);
+        double jaw_error = wrapToPi(road_heading-carState[2]);
+
+        // Path curvature controller
+        double tla = 1;    
+        double xla = abs(carState[4])*tla;
+        double veh_b = 2.7;
+        double Kus = 0.0028;;
+        double dla = 2.7 + xla;
+        double delta = (2.7 + Kus*pow(carState[4],2))*(kappa + (2/pow(dla,2))*(y_error + xla*jaw_error));
+
+        // Define steer command
+        double dmax = 0.5435;
+        delta = std::min(std::max(-dmax,delta),dmax);
+        d_cmd = delta/dmax;
+
+        if(debug){
+            cout<<"path_x = ["<<path.x[IDmin]<<", "<<path.x[IDmin+1]<<", "<<path.x[IDmin+2]<<"]"<<endl;
+            cout<<"path_y = ["<<path.y[IDmin]<<", "<<path.y[IDmin+1]<<", "<<path.y[IDmin+2]<<"]"<<endl;
+            cout<<"lateral error="<<y_error<<endl;
+            cout<<"heading | road="<<road_heading<<", car="<<carState[2]<<", error="<<jaw_error<<endl;
+            cout<<"road curvature | kappa="<<kappa<<endl;
+            cout<<"delta="<<delta<<endl;
+            cout<<"------------------------"<<endl;
+        }
+
+        assert( (-1<=d_cmd)&&(d_cmd<=1)&&"Steer command is out of limits! [-1,1]");
+        assert( (-M_PI<=jaw_error)&&(M_PI>=jaw_error)&&"Heading error is out of limits! [0,2pi]");
+
         return true;
     }else{
         return false;
@@ -150,7 +199,7 @@ void Observer::callbackState(const car_msgs::State& msg){
     return;
 }
 
-void Observer::callbackMotion(const car_msgs::MotionResponse& msg){
+void Observer::callbackMotion(const car_msgs::Trajectory& msg){
     path=msg;
     ROS_INFO_STREAM("Updated motion plan.");
     return;
@@ -167,21 +216,21 @@ double convertQuaternionToEuler(geometry_msgs::Quaternion input){
  ****      Controller itself     *******
  **************************************/
 
-double getLateralError(const car_msgs::MotionResponse path, const vector<double>& x, const int& IDtr, const int& IDwp){
+double getLateralError(const car_msgs::Trajectory path, const vector<double>& x, const int& IDwp){
     // Determine the ID's of the reference that will be used for lateral error calculation
     int IDmin, IDmax;
     if (IDwp==0){
         IDmin = IDwp; IDmax = IDwp+2;
     }
-    else if (IDwp==(path.tra[IDtr].x.size()-1)){
+    else if (IDwp==(path.x.size()-1)){
         IDmin = IDwp-2; IDmax = IDwp;
     }
     else{
         IDmin = IDwp-1; IDmax = IDwp+1;
     }
     // Extract points
-    double xval[3] {path.tra[IDtr].x[IDmin],path.tra[IDtr].x[IDmin+1],path.tra[IDtr].x[IDmax]};
-    double yval[3] {path.tra[IDtr].y[IDmin],path.tra[IDtr].y[IDmin+1],path.tra[IDtr].y[IDmax]};
+    double xval[3] {path.x[IDmin],path.x[IDmin+1],path.x[IDmax]};
+    double yval[3] {path.y[IDmin],path.y[IDmin+1],path.y[IDmax]};
     // Extend preview point with vehicle heading
     double Xpreview[3] {x[0],x[1],x[2]};
     // Transform the extracted reference into local coordinates of the preview point
@@ -225,4 +274,19 @@ double interpolate(const double (&Txval)[3], const double (&Tyval)[3]){
         y = y + Tyval[i]*L;
     }
     return y;
+}
+
+double wrapTo2Pi(double x){
+    // Wrap angle to [0,2pi]
+    x = fmod(x,2*M_PI);
+    if (x < 0)
+        x += 2*M_PI;
+    return x;
+}
+
+double wrapToPi(double x){
+    x = fmod(x + pi,2*pi);
+    if (x < 0)
+        x += 2*pi;
+    return x - pi;
 }

@@ -16,6 +16,7 @@
 		name="rrt_node"
 		output="screen"
 		required="true"
+		launch-prefix="xterm -e"
 	/>
 	<!-- Start the mission planner -->
 	<node
@@ -30,7 +31,9 @@
 		pkg="control"
 		type="control_node"
 		name="control_node"
+		output="screen"
 		respawn="true"
+		
 	/>
 	<!-- State estimator node -->
 	<node

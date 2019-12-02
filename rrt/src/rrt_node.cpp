@@ -2,7 +2,7 @@
 bool draw_tree =1;
 bool draw_obs = 0;
 bool draw_final_path = 0;
-bool debug_mode = 1;
+bool debug_mode = 0;
 bool debug_reference = 0;
 bool draw_states = 0;
 bool debug_sim = 0;
