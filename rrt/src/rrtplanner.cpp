@@ -79,6 +79,10 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const vector<double>& Cxy){;
+	if(debug_mode){
+		cout<<"New iteration."<<endl;
+	}
+	
 	// #### RANDOM SAMPLING: ####
 	geometry_msgs::Point sample;
 	if (RRT.bend){ 	// Sample on lane

@@ -118,9 +118,9 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	vector<Node> bestNodes = extractBestPath(RRT.tree,pubPtr);
 	// Stop when tree is empty
 	if(bestNodes.size()==0){		
-		ROS_ERROR_STREAM("NO SOLUTION FOUND.");	
-		transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);
+		if(req.bend){	transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);}
 		transformPathCarToWorld(motionplan,worldState);
+		ROS_ERROR_STREAM("No solution found. Returning without response.");
 		return;
 	}
 	// Select a part to commit here
@@ -144,8 +144,10 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	transformPathCarToWorld(commit,worldState);
 	transformPathCarToWorld(plan,worldState);
 
+	// Publish committed part and add to motion plan
 	storeCommit(commit);
-	publishPlan(plan); // Publish committed part and add to motion plan
+	publishPlan(plan); 
+	// Filtered message for MPC controller
 	car_msgs::Trajectory msg = generateMPCmessage(plan);
 	filterMPCmessage(msg);
 	pubMPC->publish(msg);
@@ -191,6 +193,14 @@ void filterMPCmessage(car_msgs::Trajectory& msg){
 			d=0;
 		}
 	}
+	// Push back last point
+	msgFiltered.x.push_back(msg.x.back());
+	msgFiltered.y.push_back(msg.y.back());
+	msgFiltered.theta.push_back(msg.theta.back());
+	msgFiltered.v.push_back(msg.v.back());
+	msgFiltered.a.push_back(msg.a.back());
+	msgFiltered.a_cmd.push_back(msg.a_cmd.back());
+	msgFiltered.d_cmd.push_back(msg.d_cmd.back());
 	msg = msgFiltered;
 }
 
