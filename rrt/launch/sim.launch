@@ -7,7 +7,6 @@
 		type="pcl_converter_node"
 		name="pcl_converter_node"
 		respawn="true"
-		respawn_delay="2"
 	/>
 	<!-- Start the RRT planner node -->
 	<node
@@ -16,14 +15,13 @@
 		name="rrt_node"
 		output="screen"
 		required="true"
-		launch-prefix="xterm -e"
 	/>
 	<!-- Start the mission planner -->
 	<node
 		pkg="mission_planner"
 		type="mission_planner_node"
 		name="mission_planner_node"
-		output="screen"
+		output="log"
 		required="true"
 	/>
 	<!-- Start the control node -->
@@ -31,9 +29,8 @@
 		pkg="control"
 		type="control_node"
 		name="control_node"
-		output="screen"
+		output="log"
 		respawn="true"
-		
 	/>
 	<!-- State estimator node -->
 	<node

@@ -25,7 +25,7 @@ double getLateralError(const car_msgs::Trajectory path, const vector<double>& x,
 double wrapTo2Pi(double x);
 double wrapToPi(double x);
 
-const bool debug = true;
+const bool debug = false;
 const double pi = M_PI;
 
 int main( int argc, char** argv ){	
@@ -78,7 +78,6 @@ bool Observer::updateControls(){
             // break;
         }
     }
-    if(debug){ cout<<"bestID="<<bestID<<endl;}
 
     // Get controls for best ID
     if (bestID==(path.x.size()-1)){
@@ -87,8 +86,7 @@ bool Observer::updateControls(){
         d_cmd = 0;
     }else if (bestID!=std::numeric_limits<int>::max()){
         // Longitudinal controller
-        v_cmd = path.a_cmd[bestID+1];
-        if(debug){cout<<"v_cmd="<<v_cmd<<endl;}
+        v_cmd = path.a_cmd[bestID];
         double v_error = v_cmd-carState[4];
         a_cmd = 0.5*v_error;
         a_cmd = std::min(std::max(double(-1),a_cmd),double(1));
@@ -105,30 +103,34 @@ bool Observer::updateControls(){
         }else{
             IDmin = bestID-1;
         }
-    
-            // First order derivative
-        double dy[2];
+        // First order derivative
+        double dy[2], dx[2], dydx[2];
         for(int i = 0; i!=2; i++){
-            dy[i] = ( path.y[IDmin+i] - path.y[IDmin+i-1])/ ( path.x[IDmin+i] - path.x[IDmin+i-1]);
-            // dy[i] = ( y(IDmin+i)-y(IDmin+i-1) )/ (x(IDmin+i) - x(IDmin+i-1) );
+            dx[i] = path.x[IDmin+i+1] - path.x[IDmin+i];
+            dy[i] = path.y[IDmin+i+1] - path.y[IDmin+i];
+            dydx[i] = dy[i]/dx[i];
+            // cout<<"dydx["<<i<<"]="<<dydx[i]<<endl;
         }
             // Second order derivative
-        double ddy = ( dy[1] - dy[0] )/ (path.x[IDmin+2] - path.x[IDmin]);
-        double slope = (dy[1]-dy[0])/2;
+        double h2 = (dx[1]+dx[0])/2;
+        double ddy = (dydx[1]-dydx[0])/h2;
+        // cout<<"h2="<<h2<<", ddy="<<ddy<<endl;
+        double slope = (dydx[1]-dydx[0])/2;
+        // cout<<"slope="<<slope<<endl;
             // path curvature
         double kappa = ddy/pow( 1 + pow(slope,2),double(3)/double(2));
 
         // Heading error calculation
-        double road_heading = atan2(slope,1);
+        double road_heading = atan2((dy[1]+dy[0])/2,(dx[1]+dx[0])/2);
         double jaw_error = wrapToPi(road_heading-carState[2]);
 
         // Path curvature controller
-        double tla = 1;    
+        double tla = 1;
         double xla = abs(carState[4])*tla;
-        double veh_b = 2.7;
-        double Kus = 0.0028;;
-        double dla = 2.7 + xla;
-        double delta = (2.7 + Kus*pow(carState[4],2))*(kappa + (2/pow(dla,2))*(y_error + xla*jaw_error));
+        double veh_b = 1.61;
+        double Kus = 0.0028;
+        double dla = veh_b + xla;
+        double delta = (veh_b + Kus*pow(carState[4],2))*(kappa + (2/pow(dla,2))*(y_error + xla*jaw_error));
 
         // Define steer command
         double dmax = 0.5435;
@@ -136,13 +138,11 @@ bool Observer::updateControls(){
         d_cmd = delta/dmax;
 
         if(debug){
-            cout<<"path_x = ["<<path.x[IDmin]<<", "<<path.x[IDmin+1]<<", "<<path.x[IDmin+2]<<"]"<<endl;
-            cout<<"path_y = ["<<path.y[IDmin]<<", "<<path.y[IDmin+1]<<", "<<path.y[IDmin+2]<<"]"<<endl;
-            cout<<"lateral error="<<y_error<<endl;
-            cout<<"heading | road="<<road_heading<<", car="<<carState[2]<<", error="<<jaw_error<<endl;
-            cout<<"road curvature | kappa="<<kappa<<endl;
-            cout<<"delta="<<delta<<endl;
-            cout<<"------------------------"<<endl;
+            ROS_INFO_STREAM_THROTTLE(0.5,"path_x = ["<<path.x[IDmin]<<", "<<path.x[IDmin+1]<<", "<<path.x[IDmin+2]<<"]");
+            ROS_INFO_STREAM_THROTTLE(0.5,"path_y = ["<<path.y[IDmin]<<", "<<path.y[IDmin+1]<<", "<<path.y[IDmin+2]<<"]");
+            ROS_INFO_STREAM_THROTTLE(0.5,"error_y = "<<y_error<<"; error_jaw = "<<jaw_error<<"; curvature ="<<kappa);
+            ROS_INFO_STREAM_THROTTLE(0.5,"dla = "<<dla<<"; d_cmd = "<<d_cmd<<"; a_cmd = "<<a_cmd<<"; v_ref = "<<v_cmd);
+            ROS_INFO_STREAM_THROTTLE(0.5,"-----------------------------------");
         }
 
         assert( (-1<=d_cmd)&&(d_cmd<=1)&&"Steer command is out of limits! [-1,1]");
@@ -201,7 +201,6 @@ void Observer::callbackState(const car_msgs::State& msg){
 
 void Observer::callbackMotion(const car_msgs::Trajectory& msg){
     path=msg;
-    ROS_INFO_STREAM("Updated motion plan.");
     return;
 }
 

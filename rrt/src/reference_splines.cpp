@@ -19,7 +19,7 @@ MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir)
 
 // Generate a goal biased reference
 MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalPose){;
-	double Dextend = ctrl_dla;//+1.2;
+	double Dextend = ctrl_mindla;//+1.2;
 	double Dalign = 1;
 	
 	MyReference ref;
@@ -49,9 +49,9 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 	vector<double> Refy  = LinearSpacedVector(node.ref.y.back(),Pclose.y,N1);
 	vector<double> Refya = LinearSpacedVector(Pclose.y,Pfar.y,N2);
 	ref.x.insert(ref.x.end(),Refx.begin(),Refx.end());
-	ref.x.insert(ref.x.end(),Refxa.begin(),Refxa.end());
+	ref.x.insert(ref.x.end(),Refxa.begin()+1,Refxa.end());
 	ref.y.insert(ref.y.end(),Refy.begin(),Refy.end());
-	ref.y.insert(ref.y.end(),Refya.begin(),Refya.end());
+	ref.y.insert(ref.y.end(),Refya.begin()+1,Refya.end());
 	
 	// For debugging
 	assert(ref.x.size()==ref.y.size());
@@ -61,7 +61,7 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 };
 
 // Generate a trapezoidal velocity profile
-void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0, const double& vmax, const vector<double>& goal, bool GB){
+void generateVelocityProfile(MyReference& ref, const double& a0, const int& IDwp, const double& v0, const double& vmax, const vector<double>& goal, bool GB){
 	double vend = goal[3];
 	// Slope shape configuration
 	double a_acc = 1;	double a_dec = -1; 	double tmin = 1;  
@@ -69,7 +69,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double Lp, res;
 	if(GB){
 		double Dgoal = sqrt( pow(goal[0]-ref.x.front(),2) + pow(goal[1]-ref.y.front(),2));
-		Lp = Dgoal + ctrl_mindla-0.5;
+		Lp = Dgoal + ctrl_mindla;
 		res = Lp/(ref.x.size()-1);
 	}else{
 		double Dgoal = sqrt( pow(goal[0]-ref.x.back(),2) + pow(goal[1]-ref.y.back(),2));
@@ -83,8 +83,6 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	double Daccel = (pow(vmax,2)- pow(v0,2))/(2*a_acc);
 	double Dcoast = vmax*tmin;
 	double Dbrake = (pow(vend,2)-pow(vmax,2))/(2*a_dec);
-	// double a2{-0.0252}, a1{1.2344}, a0{-0.5347};
-	// double Dctrl = a2*pow(vmax,2) + a1*vmax +a0;
 	double D_vmax_bool = (Daccel + Dcoast + Dbrake)<Lp;
     
     // Check what kind of velocity profile must be generated
@@ -107,13 +105,13 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	// Update profile distances with new Vcoast
 	Daccel = ( pow(Vcoast,2)- pow(v0,2))/(2*a_acc);
 	if(Daccel<0){		Daccel = 0; Vcoast = v0;    }
-	double dv = Vcoast-vend;
-	// Dctrl = a2*pow(dv,2) + a1*dv +a0;
 	Dbrake = max(double(0), ( pow(vend,2)-pow(Vcoast,2))/(2*a_dec));
 	Dcoast = max(double(0),Lp-Daccel-Dbrake);
 
 	// Cubic polynomial interpolation
-	double astart = 0;
+	// double astart = 0;
+	double astart = max(double(0),a0);
+	ROS_WARN_STREAM("In vel profile: fix negative velocity due to negative acceleration ");
 	double vstart = v0+(v0<0.01)*0.1;
 	// if (v0<=0.5){
 	// 	astart = 5;
@@ -140,7 +138,7 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	}else{
 		Vbrake.push_back(Vcoast);
 	}
-	assert(Vacc.size()==Nacc); assert(Vbrake.size()==Nbrake);
+	
 
 	auto it_acc = Vacc.begin(); auto it_brake = Vbrake.begin();
 
@@ -155,17 +153,35 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
         }
     }
 
-	if (GB){
-		double Dtotal = Daccel+Dbrake+Dcoast;
-		// cout<<"IDwp="<<IDwp<<endl;
-		// cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
-		// cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
-		// cout<<"Vcoast = "<<Vcoast<<endl;
-		if (Dtotal<Lp){
-			ROS_WARN_STREAM("Velocity profile is too small!");
-		}
-	}	
+	// if(debug_velocity&&GB){
+	// 	// Show profile
+	// 	cout<<"--- REFERENCE DEBUG INFO ---"<<endl;
+	// 	cout<<"profile = [";
+	// 	for(auto it = ref.v.begin(); it!=ref.v.end(); it++){
+	// 		cout<<*it<<", ";
+	// 	}
+	// 	cout<<"]"<<endl<<endl;
+	// 	// show other information
+	// 	double Dtotal = Daccel+Dbrake+Dcoast;
+	// 	cout<<"IDwp="<<IDwp<<endl;
+	// 	cout<<"Dacc = "<<Daccel<<". Dcoast = "<<Dcoast<<", Dbrake= "<<Dbrake<<endl;
+	// 	cout<<"Lp="<<Lp<<", "<<Dtotal<<endl;
+	// 	cout<<"Vcoast = "<<Vcoast<<endl;
+	// }
+	
+	// Check contents
+
+	for(auto it = Vacc.begin(); it!=Vacc.end(); ++it){
+		cout<<"v="<<*it<<endl;
+		assert( (-1<=(*it))&&( (*it)<= 10)&&"Error in acceleration ramp vector");
+	}
+	for(auto it = Vbrake.begin(); it!=Vbrake.end(); ++it){
+		cout<<"v="<<*it<<endl;
+		assert( (-1<=(*it))&&( (*it)<= 10)&&"Error in brake ramp vector");
+	}
 	assert(ref.v.size()==ref.x.size());
+	assert( (Vcoast<=10)&&"Wrong coast velocity");
+	assert(Vacc.size()==Nacc); assert(Vbrake.size()==Nbrake);
 }
 
 // Print velocity profile in terminal
@@ -183,22 +199,55 @@ void showVelocityProfile(const MyReference& ref){
 
 // Get coefficients of cubic polynomial for velocity interpolation
 vector<double> getCoefficients(const double& Sf, const double& v0, const double& vf, const double& a0, const double& af){
-	 double a = a0;
-	 double tf = (2*Sf)/(v0 + vf);
-	 double c = (2*v0 - 2*vf + a0*tf + af*tf)/(pow(tf,3));
-	 double b = -(a0 - af + (3*(2*v0 - 2*vf + a0*tf + af*tf))/tf)/(2*tf);
-	 vector<double> coef{a,b,c,tf};
+	if(debug_velocity){cout<<"---- IN COEFFICIENT CALCULATION ----"<<endl;}
+	double a,b,c,tf;
+	if (abs(a0)<0.05){
+	 	// Use solution solved for a0 = 0;
+		a = 0;
+	 	tf = (2*Sf)/(v0 + vf);
+		c = (2*v0 - 2*vf + a0*tf + af*tf)/(pow(tf,3));
+		b = -(a0 - af + (3*(2*v0 - 2*vf + a0*tf + af*tf))/tf)/(2*tf);
+	}else{
+		a = a0;
+        // Trying first solution of second order root
+		double tf1 = -(3*v0 + 3*vf - sqrt(3)*sqrt(3*pow(v0,2) + 6*v0*vf + 3*pow(vf,2) + 4*a0*Sf))/a0;
+		double c1 = (2*v0 - 2*vf + a0*tf1 + af*tf1)/(pow(tf1,3));
+		double b1 = -(a0 - af + (3*(2*v0 - 2*vf + a0*tf1 + af*tf1))/tf1)/(2*tf1);
+		// Trying second solution 
+		double tf2 = -(3*v0 + 3*vf + sqrt(3)*sqrt(3*pow(v0,2) + 6*v0*vf + 3*pow(vf,2) + 4*a0*Sf))/a0;
+		double c2 = (2*v0 - 2*vf + a0*tf2 + af*tf2)/(pow(tf2,3));
+		double b2 = -(a0 - af + (3*(2*v0 - 2*vf + a0*tf2 + af*tf2))/tf2)/(2*tf2);
+		// Select best solution
+		double S1 = v0*tf1 + 0.5*a*tf1*tf1 + 0.333333333333333333*b1*tf1*tf1*tf1 + 0.25*c1*tf1*tf1*tf1*tf1;
+		double S2 = v0*tf2 + 0.5*a*tf2*tf2 + 0.333333333333333333*b2*tf2*tf2*tf2 + 0.25*c2*tf2*tf2*tf2*tf2;
+		if(debug_velocity){		
+			cout<<"S1="<<S1<<"; S2="<<S2<<endl;		
+		}
+		
+		if( abs(Sf-S1)<abs(Sf-S2) ){
+			b = b1; c = c1; tf = tf1;
+		}else{
+			b = b2; c = c2; tf = tf2;
+		}
+	}
+	vector<double> coef{a,b,c,tf};
 
 	// Check results
 	double Send =  v0*tf + 0.5*coef[0]*tf*tf + 0.333333333333333333*coef[1]*tf*tf*tf + 0.25*coef[2]*tf*tf*tf*tf;
 	double Vend = v0 + coef[0]*tf + coef[1]*tf*tf + coef[2]*tf*tf*tf;
 
-	// cout<<"v0="<<v0<<"; vf="<<vf<<"; Sf="<<Sf<<"; a0="<<a0<<"; af="<<af<<endl;
-	// cout<<"coef = ["<<coef[0]<<", "<<coef[1]<<", "<<coef[2]<<", "<<coef[3]<<"]"<<endl;
-	// cout<<"S0="<<0<<", Send="<<Send<<endl;
-	// cout<<"V0="<<0<<", Vend="<<Vend<<endl<<endl;
-	assert(abs(Send-Sf)<0.1);
-	assert(abs(Vend-vf)<0.05);
+	// DEBUG INFO
+	if(debug_velocity){
+		
+		cout<<"v0="<<v0<<"; vf="<<vf<<"; Sf="<<Sf<<"; a0="<<a0<<"; af="<<af<<endl;
+		cout<<"coef = ["<<coef[0]<<", "<<coef[1]<<", "<<coef[2]<<", "<<coef[3]<<"]"<<endl;
+		cout<<"S0="<<0<<", Send="<<Send<<endl;
+		cout<<"V0="<<0<<", Vend="<<Vend<<endl<<endl;
+	}
+
+	cout<<"vend="<<Vend<<", vf="<<vf<<endl;
+	assert((abs(Send-Sf)<0.05)&&"Error in spline coefficient calculation!");
+	assert((abs(Vend-vf)<0.05)&&"Error in spline coefficient calculation!");
 	return coef;
 }
 
@@ -230,27 +279,48 @@ vector<double> getTimeVector(const vector<double>& coef, const double& t0, const
 		Sheap.push_back(S);
 	}
 	double Send =  v0*tf + 0.5*coef[0]*tf*tf + 0.333333333333333333*coef[1]*tf*tf*tf + 0.25*coef[2]*tf*tf*tf*tf;
-	// cout<<"Send="<<Send<<", v0="<<v0<<endl;
-	// cout<<"coef = ["<<coef[0]<<", "<<coef[1]<<", "<<coef[2]<<", "<<coef[3]<<"]"<<endl;
-	// cout<<"Theap.front()="<<Theap.front()<<", back()="<<Theap.back()<<endl;
-	// cout<<"Sheap.front()="<<Sheap.front()<<", back()="<<Sheap.back()<<endl<<endl;
-	assert( abs(Sheap.back()-Sf)<0.01);
+	cout<<"---- IN TIME VECTOR GENERATION ----"<<endl;
+	cout<<"coef = ["<<coef[0]<<", "<<coef[1]<<", "<<coef[2]<<", "<<coef[3]<<"]"<<endl;
+	cout<<"Theap.front()="<<Theap.front()<<", back()="<<Theap.back()<<", Sheap.front()="<<Sheap.front()<<", back()="<<Sheap.back()<<endl;
+	assert( (abs(Sheap.back()-Sf)<0.05) && "Error in spline coefficient calculation");
+	
 	// Get the path vector and match it to a time of the lookup table
 	vector<double> Spath = LinearSpacedVector(0,Sf,N);
 	vector<double> Tpath;
-	for(int i = 0; i!=Spath.size(); i++){
+	assert( (Spath.size()==N) && "Wrong path dimension");
+	for(auto it = Spath.begin(); it!=Spath.end(); ++it){
 		for(int j = 0; j!=Sheap.size(); j++){
-		 	if (abs(Sheap[j]-Spath[i])<res/4){
+			if (Sheap[j]>=(*it)){
 				Tpath.push_back(Theap[j]);
-                break;
+				break;
 			}else if (j==(Sheap.size()-1)){
-				cout<<"Sp="<<Spath[j]<<"; Sh="<<Sheap.back()<<endl;
-
-				assert(j!=(Sheap.size()-1));
+				ROS_WARN_STREAM("Sheap.back="<<Sheap.back()<<", Spath.back()="<<Spath.back());
+				ROS_WARN_STREAM("Error in last point! Pushing back last element!");
+				Tpath.push_back(Theap.back());
 			}
-			
-        }
+		}
     }
+
+	cout<<"Tpath=[";
+	for(auto it = Tpath.begin(); it!=Tpath.end(); ++it){
+		cout<<*it<<", ";
+	}
+	cout<<"]"<<endl;
+	// for(int i = 0; i!=Spath.size(); i++){
+	// 	cout<<"Spath="<<Spath[i]<<endl;
+	// 	for(int j = 0; j!=Sheap.size(); j++){
+	// 	 	if (abs(Sheap[j]-Spath[i])<res/8){
+	// 			Tpath.push_back(Theap[j]);
+    //             break;
+	// 		}else if (j==(Sheap.size()-1)){
+	// 			cout<<"Sp="<<Spath[j]<<"; Sh="<<Sheap.back()<<endl;
+
+	// 			// assert(j!=(Sheap.size()-1));
+	// 		}
+			
+    //     }
+    // }
+	cout<<"Tpath.size()="<<Tpath.size()<<"; N="<<N<<endl;
 	assert(Tpath.size()==N);
 	return Tpath;
 }

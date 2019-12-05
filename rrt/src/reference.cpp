@@ -67,7 +67,7 @@ MyReference getGoalReference(const Vehicle& veh, Node node, vector<double> goalP
 };
 
 // Generate a trapezoidal velocity profile
-void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0, const double& vmax, const vector<double>& goal, bool GB){
+void generateVelocityProfile(MyReference& ref, const double& a0, const int& IDwp, const double& v0, const double& vmax, const vector<double>& goal, bool GB){
 	// generateVelProfile(ref,v0,vmax,vend,IDwp,goal,GB)
 	double vend = goal[3];
 	// Slope shape configuration
@@ -132,13 +132,16 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 			// double t2 = -(v0 + (v0^2 + 2*a_acc*D)^(1/2))/a_acc;
             double t = (t1>=0)*t1+(t2>=0)*t2;
             ref.v.push_back(v0+a_acc*t);
+			assert((0<=ref.v.back())&&(ref.v.back()<=10)&&"Error in acceleration part of profile (v>10)");
         }else if (D<=(Daccel+Dcoast)){
             ref.v.push_back(Vcoast);
+			assert((0<=ref.v.back())&&(ref.v.back()<=10)&&"Error in coasting part of profile (v>10)");
 		}else{
             double t1 = -(Vcoast + sqrt(pow(Vcoast,2) + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec))/a_dec;
             double t2 = -(Vcoast - sqrt(pow(Vcoast,2) + 2*D*a_dec - 2*Daccel*a_dec - 2*Dcoast*a_dec))/a_dec;
             double dt = (t1!=tbrake)*(t1>=0)*(t1<=tbrake)*t1+(t2>=0)*(t2<=tbrake)*t2;
             ref.v.push_back( max(double(0),Vcoast+a_dec*dt));
+			assert((0<=ref.v.back())&&(ref.v.back()<=10)&&"Error in braking part of profile (v>10)");
         }
     }
 	// For debugging
@@ -151,13 +154,22 @@ void generateVelocityProfile(MyReference& ref, const int& IDwp, const double& v0
 	// 	cout<<"Vcoast = "<<Vcoast<<endl;
 	// 	sleep(100);
 	// }
+
+	if(debug_velocity){
+		cout<<"velocity = [";
+		for(auto it = ref.v.begin(); it!=ref.v.end(); it++){
+			cout<<*it<<", ";
+		}
+		cout<<"]"<<endl;
+	}
 	assert(ref.v.size()==ref.x.size());
+	assert( (Vcoast<=10)&&"Wrong coast velocity");
 }
 
 void showVelocityProfile(const MyReference& ref){
 	cout<<endl<<"---Reference---"<<endl;
-	cout<<"x = ["<<ref.x.front()<<", "<<ref.x.back()<<"]"<<endl;
-	cout<<"y = ["<<ref.y.front()<<", "<<ref.y.back()<<"]"<<endl;
+	// cout<<"x = ["<<ref.x.front()<<", "<<ref.x.back()<<"]"<<endl;
+	// cout<<"y = ["<<ref.y.front()<<", "<<ref.y.back()<<"]"<<endl;
 	cout<<"Velocity profile: "<<endl;
 	auto it = ref.v.begin();
 	for(it; it!=ref.v.end(); it++){

@@ -40,7 +40,7 @@ Simulation::Simulation(	const MyRRT& RRT, const vector<double>& state, MyReferen
 	Controller control(ref,state);				// Initialize controller
 	stateArray.back()[7] = control.IDwp;		// Add waypoint ID in stateArray
 	if (genProfile){
-		generateVelocityProfile(ref,control.IDwp,Vstart,vmax,RRT.goalPose,GoalBiased);
+		generateVelocityProfile(ref,0,control.IDwp,Vstart,vmax,RRT.goalPose,GoalBiased);
 
 	}
 	propagate(RRT, control,ref,veh);			// Predict vehicle trajectory
@@ -94,7 +94,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		}
 		if (draw_states){
 			// Print the states
-			}
+		}
 
 		// Stop simulation if goal is reached
 		double dist_to_goal = sqrt( pow(x[0]-RRT.goalPose[0],2) + pow(x[1]-RRT.goalPose[1],2));
@@ -103,11 +103,11 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double Verror = (x[4]-ref.v.back());
 		if (control.endreached&&abs(Verror<0.05)){
-			// if(wasNearGoal){
-			// 	ROS_WARN_STREAM("Was near goal but did not reach! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
-			// 	ROS_WARN_STREAM("Dist2goal= "<<dist_to_goal<<" head error= "<<goal_heading_error<<" dla= "<<ctrl_dla);
-			// 	showVelocityProfile(ref);
-			// }
+			if(wasNearGoal){
+				ROS_WARN_STREAM("Was near goal but did not reach! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
+				ROS_WARN_STREAM("Dist2goal= "<<dist_to_goal<<" head error= "<<goal_heading_error<<" dla= "<<ctrl_dla);
+				showVelocityProfile(ref);
+			}
 			endReached = true; return;
 		}
 
@@ -124,9 +124,9 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			// cout<<"x="<<x[0]<<", y="<<x[1]<<", ac="<<ctrlCmd.ac<<", a="<<x[5]<<", v="<<x[4]<<endl;
 		}
 	}	
-	// if(wasNearGoal){
-	// 	ROS_WARN_STREAM("Was near goal but did not reach it!");
-	// 	showVelocityProfile(ref);
-	// }
+	if(wasNearGoal){
+		ROS_WARN_STREAM("Was near goal but end not reached");
+		showVelocityProfile(ref);
+	}
 	fail_iterlimit++;
 };

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="world_name" default="myworldobs.world"/>
+  <arg name="world_name" default="myworldped.world"/>
   <arg name="gazebo_gui" default="true"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
