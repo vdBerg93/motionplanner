@@ -35,8 +35,9 @@ class OBB{
 };
 
 // Primitives
-bool intersects(OBB a, OBB b);
-bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::Obstacle2D>& det, const vector<double>& carState);
-vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const double& t, const vector<double>& carState);
+double getOBBdist(OBB a, OBB b);
+bool checkCollisionTra(const StateArray& T, const vector<car_msgs::Obstacle2D>& det, const vector<double>& carState);
+double checkObsDistance(const vector<double>& states, const vector<car_msgs::Obstacle2D>& det, const vector<double>& carState);
+vector<OBB> getOBBvector(const vector<car_msgs::Obstacle2D>& det, const double& t, const vector<double>& carState);
 
 #endif

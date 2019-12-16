@@ -49,6 +49,10 @@ int main (int argc, char** argv)
 	ros::Publisher pubMPC = nh.advertise<vision_msgs::Detection2DArray>("/detection_2D",100);
 	ObserveObject.pubMPC = &pubMPC;
 
+	// Car state subscriber
+	ros::Subscriber sub = nh.subscribe("/carstate",1,&Observer::callbackState, &ObserveObject);
+
+
 	// TF listener
 	tf::TransformListener listener;
 	ObserveObject.tfListener = &listener;
@@ -75,9 +79,7 @@ int main (int argc, char** argv)
     		listener.waitForTransform("base_link","ped_link_1", now, ros::Duration(3.0));
     		listener.lookupTransform("base_link", "ped_link_1", now, tfPed);
 			listener.lookupTwist("base_link", "ped_link_1",now, ros::Duration(0.25), twistPed);
-			// listener.waitForTransform("chassis","ped_link_1", now, ros::Duration(3.0));
-    		// listener.lookupTransform("chassis","ped_link_1",  now, tfPed);
-			// listener.lookupTwist("chassis","ped_link_1", now, ros::Duration(0.1), twistPed);
+
 			// Update obstacle vector from detection
 			// ROS_INFO_STREAM("Clearing vector..");
 			car_msgs::Obstacle2D pedObs;

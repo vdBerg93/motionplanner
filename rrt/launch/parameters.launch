@@ -10,4 +10,9 @@
 	<param 	name="ctrl/Ki" 		value="0"	/>
 	<param  name="max_velocity"	value="5"	/>
 	<param 	name="motionplanner/replan" value="1"/>
+	<param 	name="motionplanner/weight_distance" value="1"/>
+	<param 	name="motionplanner/weight_curvature" value="10"/>
+	<param 	name="motionplanner/weight_obstacle_gain" value="0"/>
+	<param 	name="motionplanner/weight_obstacle_slope" value="4"/>
+	<param 	name="motionplanner/weight_lanedeviation" value="1"/>
 </launch>

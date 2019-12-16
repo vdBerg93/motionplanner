@@ -99,9 +99,9 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
 		// transformStateCarToRoad(carPose,req.Cxy,veh);
 	}
-	// showPath(motionplan);
 	// Initialize RRT planner
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
+	RRT.det = det; RRT.carState = carPose; 
 	// cout<<"Created tree object"<<endl;
 	double Tp = initializeTree(RRT, veh, motionplan, carPose);
 

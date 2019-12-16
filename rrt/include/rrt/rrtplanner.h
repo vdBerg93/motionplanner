@@ -46,6 +46,8 @@ struct Node{
     void addChild(int child){children.push_back(child);}
 };
 
+#include <car_msgs/Obstacle2D.h>
+
 class MyRRT{
     public:
         int sortLimit;
@@ -56,6 +58,11 @@ class MyRRT{
         signed int direction;
         vector<double> laneShifts;   // Lane shifts. 1st element is goal lane. 2nd element is other lane
         vector<double> Cxy;
+
+        // For other functions only (sim. etc)
+        vector<car_msgs::Obstacle2D> det;
+        vector<double> carState;
+        double Wcost[5];
 
         // Tree iniitalization
         MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy, const bool& _bend);

@@ -53,9 +53,6 @@ double getDistToLane(const double& x, const double& y, double S, const vector<do
 }
 
 void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReference& ref, const Vehicle& veh){
-	int Wlane = 1;
-	int Wcurv = 4000;
-	
 	bool wasNearGoal = false;
 
 	for(int i = 0; i<(20/sim_dt); i++){
@@ -69,19 +66,19 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		x[8] = ref.v[control.IDwp+LAlong];
 		x[9] = ctrlCmd.dc;		// Control logging
 		stateArray.push_back(x);									// Add state to statearray
-		// costE = costE + x[4]*sim_dt; 								// Update cost estimate for exploration
+		// ****** CHECK COLLISION *****
+		double Dobs = checkObsDistance(stateArray.back(), RRT.det, RRT.carState);
+		if (Dobs==0){ 	
+			endReached = false; 	fail_collision++;	return;
+		}
+
+		// ****** UPDATE COSTS ********
 		costE += x[4]*sim_dt;
-		double kappa = tan(x[3])/veh.L;								// Calculate vehicle path curvature
+		double kappa = tan(x[3])/veh.L;								// Vehicle path curvature
+		costS += RRT.Wcost[0]*x[4]*sim_dt + RRT.Wcost[1]*abs(kappa) + RRT.Wcost[2]*exp(-RRT.Wcost[3]*Dobs);
 		if (RRT.bend){
-			// ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
 			double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
-			double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
-			// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
-			// 		(Dgoallane<Dotherlane)*w2*abs(kappa) + 		// More cost on curvature in next lane
-			// 		wc*Dgoallane;
-			costS += Dgoallane;
-		}else{
-			costS += x[4]*sim_dt+ 0.1*abs(kappa);
+			costS += RRT.Wcost[4]*Dgoallane;
 		}
 
 		// Check acceleration limits
@@ -117,6 +114,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			wasNearGoal = true;
 			if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
+				ROS_WARN_STREAM_THROTTLE(1,"Goal reached in "<<stateArray.back()[6]<<" seconds!");
 				goalReached = true; return;
 			}
 		}

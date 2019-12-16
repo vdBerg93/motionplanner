@@ -6,7 +6,13 @@
 using namespace std;
 
 MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy, const bool& _bend):
-	bend(_bend), goalReached(0), sortLimit(10), direction(1), goalPose(_goalPose), laneShifts(_laneShifts), Cxy(_Cxy){}
+	bend(_bend), goalReached(0), sortLimit(10), direction(1), goalPose(_goalPose), laneShifts(_laneShifts), Cxy(_Cxy){
+		ros::param::get("motionplanner/weight_distance",Wcost[0]);
+		ros::param::get("motionplanner/weight_curvature",Wcost[1]);
+		ros::param::get("motionplanner/weight_obstacle_gain",Wcost[2]);
+		ros::param::get("motionplanner/weight_obstacle_slope",Wcost[3]);
+		ros::param::get("motionplanner/weight_lanedeviation",Wcost[4]);
+	}
 
 void MyRRT::addInitialNode(const vector<double>& state){
 	// Set the first node in the tree at the current preview point of the lateral controller
@@ -111,13 +117,13 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 		Simulation sim(RRT,RRT.tree[*it].state,ref,veh,false,true,RRT.tree[*it].ref.v.back());					// Do closed-loop prediction
 		// If trajectory is admissible and collisionfree, add it to the tree
 		if(sim.endReached||sim.goalReached){
-			if (!checkCollision(ptrPub,sim.stateArray,det,RRT.tree.front().state)){
+			// if (!checkCollision(ptrPub,sim.stateArray,det,RRT.tree.front().state)){
 				Node node(sim.stateArray.back(), *it, ref,sim.stateArray, sim.costE + RRT.tree[*it].costE, sim.costS + RRT.tree[*it].costS, sim.goalReached);
 				RRT.addNode(node); 	node_added = true;
 				break;
-			}else{
-				fail_collision++;
-			}
+			// }else{
+				// fail_collision++;
+			// }
 		}
 	}; 
 	// #### GOAL BIASED EXPANSION ####
@@ -129,12 +135,12 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 		
 		// If trajectory is admissible and collision free, add it to the tree
 		if(sim_goal.endReached||sim_goal.goalReached){
-			if(!checkCollision(ptrPub,sim_goal.stateArray,det,RRT.tree.front().state)){
+			// if(!checkCollision(ptrPub,sim_goal.stateArray,det,RRT.tree.front().state)){
 				Node node_goal(sim_goal.stateArray.back(), RRT.tree.size()-1, ref_goal, sim_goal.stateArray,sim_goal.costE + RRT.tree.back().costE, sim_goal.costS + RRT.tree.back().costS, sim_goal.goalReached);
 				RRT.addNode(node_goal);
-			}else{
-				fail_collision++;
-			}
+			// }else{
+				// fail_collision++;
+			// }
 		}
 	}
 };

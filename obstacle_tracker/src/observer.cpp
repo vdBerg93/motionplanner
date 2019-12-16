@@ -6,7 +6,7 @@
 // 5. The size and centerpoint from the clusters are taken
 // 6. The size and coordinates are sent 
 #include <tracker.h>
-
+#include <car_msgs/State.h>
 vision_msgs::Detection2DArray generateMPCmessage(const vector<car_msgs::Obstacle2D>& obstacles);
 
 struct Observer{
@@ -14,12 +14,14 @@ struct Observer{
 	vector<double> laneCxy;
 	vector<car_msgs::Obstacle2D> Obs;
 	vector<Tracker> trackers;
+	vector<double> carState;
 	void updateTrackers();
 	void updateTrackersKF();
 	// Callback functions
 	void callbackTF(const tf2_msgs::TFMessage& msgIn);
     bool callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp);
 	void callbackParameter(pcl_converter_node::TestConfig &config, uint32_t level);
+	void callbackState(const car_msgs::State& msg);
 	// Rviz publishing
 	void sendMarkerMsg(const vector<car_msgs::Obstacle2D>& det);
 	// Publishers
@@ -28,6 +30,11 @@ struct Observer{
 	ros::Publisher* pubMPC;
 	tf::TransformListener* tfListener;
 };
+
+void Observer::callbackState(const car_msgs::State& msg){
+	carState.clear(); 
+	carState.insert(carState.begin(), msg.state.begin(), msg.state.end());
+}
 
 bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp){
 	for(auto it = Obs.begin(); it!=Obs.end(); ++it){
@@ -79,7 +86,7 @@ void Observer::callbackTF(const tf2_msgs::TFMessage& msgIn){
 	// pubPtr->publish(Obs);
 	// ROS_INFO_STREAM("Published to Rviz...");
 	// updateTrackers();
-	updateTrackersKF();
+	// updateTrackersKF();
 	ROS_INFO_STREAM("Updated trackers...");
 	sendMarkerMsg(Obs);
 	ROS_INFO_STREAM("Sent marker message...");
@@ -215,10 +222,10 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 		marker.points[0].y = obsArray[j].obb.center.y;
 		marker.points[0].z = 0;
 		ROS_WARN_ONCE("IN PCL_CONV PUBLISH: velocity of ego vehicle is fixed");
-		// marker.points[1].x = obsArray[j].obb.center.x + 4*(obsArray[j].vel.linear.x+cos(obsArray[j].obb.center.theta)*33); // Add EGO velocity 33m/s
-		// marker.points[1].y = obsArray[j].obb.center.y + 4*(obsArray[j].vel.linear.y+sin(obsArray[j].obb.center.theta)*33);
-		marker.points[1].x = obsArray[j].obb.center.x + 1*obsArray[j].vel.linear.x; // Add EGO velocity 33m/s
-		marker.points[1].y = obsArray[j].obb.center.y + 1*obsArray[j].vel.linear.y;
+		// marker.points[1].x = obsArray[j].obb.center.x + 5*(obsArray[j].vel.linear.x+cos(obsArray[j].obb.center.theta)*carState[4]); // Add EGO velocity 33m/s
+		// marker.points[1].y = obsArray[j].obb.center.y + 5*(obsArray[j].vel.linear.y+sin(obsArray[j].obb.center.theta)*carState[4]);
+		marker.points[1].x = obsArray[j].obb.center.x + 5*(obsArray[j].vel.linear.x+carState[4]); // Add EGO velocity 33m/s
+		marker.points[1].y = obsArray[j].obb.center.y + 5*obsArray[j].vel.linear.y;
 		// marker.points[1].x = obsArray[j].obb.center.x;
 		// marker.points[1].y = obsArray[j].obb.center.y;
 		marker.points[1].z = 0;
