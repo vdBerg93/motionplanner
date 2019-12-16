@@ -4,7 +4,7 @@
       <link name='ped_link_1'>
         <gravity>0</gravity>
         <collision name='bottom'>
-          <pose>10 2 0 0 0 0</pose>
+          <pose>10 2 0 0 0 3.14</pose>
           <geometry>
             <box>
               <size>0.35 0.75 0.02</size>
@@ -47,8 +47,8 @@
           <commandTopic>ped_link_1</commandTopic>
           <ini_x>10</ini_x>
           <ini_y>0</ini_y>
-          <odometryTopic>odom</odometryTopic>
-          <odometryFrame>odom</odometryFrame>
+          <odometryTopic>map</odometryTopic>
+          <odometryFrame>map</odometryFrame>
           <odometryRate>10.0</odometryRate>
           <robotBaseFrame>ped_link_1</robotBaseFrame>
         </plugin>

@@ -77,13 +77,14 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
+	ROS_INFO_STREAM("Considering "<<det.size()<<" obstacles.");
 	// Determine an upperbound of the lateral acceleration introduced by bending the path
 	if (req.Cxy.size()>0){
 		ay_road_max = abs(pow(worldState[4],2)*(2*req.Cxy[0]));
 	}else{
 		ay_road_max = 0;
 	}
-	ROS_INFO_STREAM("Doing coordinate transformations");
+	// ROS_INFO_STREAM("Doing coordinate transformations");
 	// Get the array of committed motion plans
 	transformPathWorldToCar(motionplan,worldState);
 	// If road parametrization is available, convert motion spec to straightened scenario
@@ -104,7 +105,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// cout<<"Created tree object"<<endl;
 	double Tp = initializeTree(RRT, veh, motionplan, carPose);
 
-	cout<<"Committed path time= "<<Tp<<endl;
+	// cout<<"Committed path time= "<<Tp<<endl;
 
 	// Build the tree
 	Timer timer(200); int iter = 0;				

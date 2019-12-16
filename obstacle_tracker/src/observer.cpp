@@ -6,7 +6,6 @@
 // 5. The size and centerpoint from the clusters are taken
 // 6. The size and coordinates are sent 
 #include <tracker.h>
-#include "obb.cpp"
 
 vision_msgs::Detection2DArray generateMPCmessage(const vector<car_msgs::Obstacle2D>& obstacles);
 
@@ -18,9 +17,9 @@ struct Observer{
 	void updateTrackers();
 	void updateTrackersKF();
 	// Callback functions
-	void callbackLane(const car_msgs::LaneDet& msg);
-	void callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input);
+	void callbackTF(const tf2_msgs::TFMessage& msgIn);
     bool callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp);
+	void callbackParameter(pcl_converter_node::TestConfig &config, uint32_t level);
 	// Rviz publishing
 	void sendMarkerMsg(const vector<car_msgs::Obstacle2D>& det);
 	// Publishers
@@ -38,164 +37,53 @@ bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::g
 	return true;
 }
 
-void Observer::callbackLane(const car_msgs::LaneDet& msg){
-	laneCxy = msg.coef;
-	return;
+void callbackParameter(pcl_converter_node::TestConfig &config, uint32_t level){
+	ROS_WARN_STREAM("Received reconfigure request. Updating parameters.");
+	Kalman_gain_pos = 		config.Kalman_gain_pos;
+	Kalman_gain_vel = 		config.Kalman_gain_vel;
+	Kalman_gain_meas = 		config.Kalman_gain_meas;
+	PCL_cluster_maxit = 	config.PCL_cluster_maxit;
+	PCL_cluster_treshold = 	config.PCL_cluster_treshold;
 }
 
-void Observer::callbackPointcloud (const sensor_msgs::PointCloud2ConstPtr& input)
-{
-	cout<<"--- Processing new pointcloud ---"<<endl;
-  	//#######################################################################
-  	//#### Read data and perform segmentation and ground plane removal 
-  	//#######################################################################	
-	// 1. CLEAR DETECTIONSr
-	Obs.clear();
-
-	// Convert ROS message to pcl format 
-  	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
-  	pcl::fromROSMsg (*input, *cloud);
-
-	pcl::PointCloud<pcl::PointXYZ> pclIn = *cloud;
-
-	bool T = pcl_ros::transformPointCloud("base_link",pclIn, *cloud, *tfListener);
-	
-	// bool succeed = pcl_ros::transformPointCloud("fr_axle", ros::Time::now(), pclIn, "center_laser_link", *cloud, *tfListener);
-	// (target frame, target time, cloud in, fixed frame, cloud out, tf listener)
-	// const ros::Time & 	target_time,
-	// const pcl::PointCloud< PointT > & 	cloud_in,
-	// const std::string & 	fixed_frame,
-	// pcl::PointCloud< PointT > & 	cloud_out,
-	// const tf::TransformListener & 	tf_listener )	
-
-
-	//*****************
-	// GROUND PLANE FILTERING (DISABLED BECAUSE THIS IS NOT INCLUDED ATM)
-	//*****************
-  	// Create the segmentation object for the planar model and set all the parameters
- 	pcl::SACSegmentation<pcl::PointXYZ> seg;
-  	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-  	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-  	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
-  	seg.setOptimizeCoefficients (true);
-  	seg.setModelType (pcl::SACMODEL_PLANE);
-  	seg.setMethodType (pcl::SAC_RANSAC);
-  	seg.setMaxIterations (100);			
-  	seg.setDistanceThreshold (0.2);
-
-  	int i=0, nr_points = (int) cloud->points.size ();
-  	while (cloud->points.size () > 0.3 * nr_points)
-  	{
-    	// Segment the largest planar component from the remaining cloud
-    	seg.setInputCloud (cloud);
-    	seg.segment (*inliers, *coefficients);
-    	if (inliers->indices.size () == 0)
-    	{
-      		cout << "Could not estimate a planar model for the given dataset." << endl;
-    	}
-
-    	// Extract the planar inliers from the input cloud
-    	pcl::ExtractIndices<pcl::PointXYZ> extract;
-    	extract.setInputCloud (cloud);
-    	extract.setIndices (inliers);
-    	extract.setNegative (false);
-
-    	// Get the points associated with the planar surface
-    	extract.filter (*cloud_plane);
-    	cout << "PointCloud representing the planar component: " << cloud_plane->points.size () << " data points." << endl;
-
-    	// Remove the planar inliers, extract the rest, the ground is filterd out of the point cloud
-    	extract.setNegative (true);
-    	extract.filter (*cloud_f);
-    	*cloud = *cloud_f;
-	}
-
-  	//#######################################################################
-  	//#### Filter the body
-  	//#######################################################################
-	float depthThreshold = 0.5;
-  	float threshold2 = depthThreshold*depthThreshold;
-
-	for (int p=0; p<cloud->points.size(); ++p)
-	{
-		// find the squared distance from the origin.
-		float pointDepth2 = (cloud->points[p].x * cloud->points[p].x) +
-							(cloud->points[p].y * cloud->points[p].y) + 
-							(cloud->points[p].z * cloud->points[p].z);
-		// remove point if it's within the threshold range
-		// if (pointDepth2 < threshold2)
-		// {
-		// 	cloud->points[p] = cloud->points[cloud->points.size()-1];
-		// 	cloud->points.resize(cloud->points.size()-1);
-		// 	--p;
-		// }
-		if ( (std::abs(cloud->points[p].x)<1) && (std::abs(cloud->points[p].y)<1) ){
-			cloud->points[p] = cloud->points[cloud->points.size()-1];
-			cloud->points.resize(cloud->points.size()-1);
-			--p;
+void Observer::callbackTF(const tf2_msgs::TFMessage& msgIn){
+	ROS_INFO_STREAM("Calling TF callback...");
+	// Find pedestrian
+	car_msgs::Obstacle2D pedObs;
+	string ped = "ped_link_1";
+	// for( int i = 0; i!=msgIn.transforms.size(); i++){
+	for(auto it = msgIn.transforms.begin(); it!=msgIn.transforms.end(); ++it){
+		// string itString = it->child_frame_id;
+		if (ped.compare(it->child_frame_id)){
+			ROS_INFO_STREAM("Found ped in TF");
+			double x = it->transform.translation.x;
+			double y = it->transform.translation.y;
+			ROS_INFO_STREAM("Got position");
+			pedObs.obb.center.x = x;
+			pedObs.obb.center.y = y;
+			break;
 		}
 	}
-  	//#######################################################################
-  	//#### Do Euclidean cluster extraction
-  	//#######################################################################
-
-  	// Creating the KdTree object for the search method of the extraction
-  	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-  	tree->setInputCloud (cloud);
-
-  	vector<pcl::PointIndices> cluster_indices;
-  	pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  	ec.setClusterTolerance (0.5); // 50cm
-  	ec.setMinClusterSize (3);
-  	ec.setMaxClusterSize (25000);
-  	ec.setSearchMethod (tree);
-  	ec.setInputCloud (cloud);
-  	ec.extract (cluster_indices);
-
-  	// msgOut.header = input->header;
-  	Eigen::Vector4f centroid;
-
-	// Dividing the clusters
-  	int j = 0;
-  	for (vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-  	{
-    	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    	for (vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-      	cloud_cluster->points.push_back (cloud->points[*pit]); //*
-    	cloud_cluster->width = cloud_cluster->points.size ();
-    	cloud_cluster->height = 1;
-    	cloud_cluster->is_dense = true;
-
-		// Extract centroid and min/max
-    	pcl::compute3DCentroid (*cloud_cluster, centroid);
-    	pcl::PointXYZ min_p, max_p;
-    	pcl::getMinMax3D(*cloud_cluster, min_p, max_p);
-
-		// Setup message data
-		car_msgs::Obstacle2D obs;
-
-		// Prepare info for 2D message
-		obs.obb.center.x = centroid[0];
-		obs.obb.center.y = centroid[1];
-		// findBestOBB(*cloud_cluster, det);
-		getOBB(*cloud_cluster,obs,laneCxy);
-
-		// Add detection to log for service call
-		Obs.push_back(obs);
-		
-		cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << endl;
-		stringstream ss;
-		ss << "cloud_cluster_" << j << ".pcd";
-		j++;
-  	}
-	// For MPC
+	pedObs.obb.center.theta = 0;
+	pedObs.obb.size_x = 1; pedObs.obb.size_y = 1;
+	// Pushback in vector
+	Obs.clear();
+	Obs.push_back(pedObs);
+	assert((Obs.size()!=0)&&"Wrong obstacle vector size!");
+	ROS_INFO_STREAM("Pushed in vector");
+	// Send MPC message
 	vision_msgs::Detection2DArray msg = generateMPCmessage(Obs);
 	pubMPC->publish(msg);
-
+	ROS_INFO_STREAM("Sent the MPC message...");
+	// Publish to Rviz
 	// pubPtr->publish(Obs);
+	// ROS_INFO_STREAM("Published to Rviz...");
 	// updateTrackers();
 	updateTrackersKF();
+	ROS_INFO_STREAM("Updated trackers...");
 	sendMarkerMsg(Obs);
+	ROS_INFO_STREAM("Sent marker message...");
+	ROS_INFO_STREAM("Updated obstacles and trackers.");
 }
 
 vector2D getRearMidCord(const car_msgs::Obstacle2D& det){

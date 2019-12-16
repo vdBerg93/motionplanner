@@ -73,7 +73,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		costE += x[4]*sim_dt;
 		double kappa = tan(x[3])/veh.L;								// Calculate vehicle path curvature
 		if (RRT.bend){
-			ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
+			// ROS_WARN_STREAM_ONCE("Goal lane shift= "<<RRT.laneShifts[0]);
 			double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
 			double Dotherlane = getDistToLane(x[0],x[1],RRT.laneShifts[1],RRT.Cxy);
 			// costS += (Dotherlane<Dgoallane)*w1*abs(kappa) +		// Less cost on curvature in first lane
@@ -103,7 +103,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double Verror = (x[4]-ref.v.back());
 		if (control.endreached&&abs(Verror<0.05)){
-			if(wasNearGoal){
+			if(wasNearGoal&&debug_sim){
 				ROS_WARN_STREAM("Was near goal but did not reach! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
 				ROS_WARN_STREAM("Dist2goal= "<<dist_to_goal<<" head error= "<<goal_heading_error<<" dla= "<<ctrl_dla);
 				showVelocityProfile(ref);
@@ -124,7 +124,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 			// cout<<"x="<<x[0]<<", y="<<x[1]<<", ac="<<ctrlCmd.ac<<", a="<<x[5]<<", v="<<x[4]<<endl;
 		}
 	}	
-	if(wasNearGoal){
+	if(wasNearGoal&&debug_sim){
 		ROS_WARN_STREAM("Was near goal but end not reached");
 		showVelocityProfile(ref);
 	}

@@ -33,9 +33,11 @@
   <include file="$(find pedsim_simulator)/launch/ped_crossing.launch">
   </include>
 
-  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 10 -y -1 -z 0 -model prius"/>
-
-  
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 0 -y -1.5 -z 0 -model prius"/>
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" required="true" />
+
+  <!-- Establish connection between pedsim and ros -->
+  <!--node pkg="person_control"       type="person_control_node"       name="person_control_node"       output="screen" /-->
+
 </launch>

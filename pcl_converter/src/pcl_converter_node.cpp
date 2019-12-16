@@ -9,8 +9,15 @@ bool DEBUG = 0;
 #include <kalman.cpp>
 #include "cloudConversion.cpp"
 
+#include <dynamic_reconfigure/server.h>
+#include <pcl_converter/TestConfig.h>
 
-
+// void callback(pcl_converter_node::Config &config, uint32_t level);
+// {
+//   ROS_INFO("Reconfigure Request: %d %f %s %s %d", 
+//             config.Kalman_gain_pos,config.Kalman_gain_vel,config.Kalman_gain_meas, 
+// 			config.PCL_cluster_maxit,config.PCL_cluster_treshold);
+// }
 
 void testKalman();
 
@@ -45,6 +52,12 @@ int main (int argc, char** argv)
 	// TF listener
 	tf::TransformListener listener;
 	ObserveObject.tfListener = &listener;
+
+	// Dynamic reconfiguration
+	// dynamic_reconfigure::Server<pcl_converter_node::Config> server;
+  	// dynamic_reconfigure::Server<pcl_converter_node::Config>::CallbackType f;
+  	// f = boost::bind(&callback, _1, _2);
+  	// server.setCallback(f);
 
 	// Create a ROS publisher for the output point cloud
 	// ros::Publisher pub = nh.advertise<car_msgs::getobstaclesResponse>("/pcl_converter_node/detections", 1);

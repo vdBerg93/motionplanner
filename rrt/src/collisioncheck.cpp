@@ -11,12 +11,9 @@ vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle
     for(int i = 0; i!=det.size(); i++){
         // Get OBB for future state
         double h = det[i].obb.center.theta;
-        // OBB obs(Vector2D(det[i].obb.center.x + (det[i].vel.linear.x+cos(h)*carState[4])*t,
-        //                  det[i].obb.center.y + (det[i].vel.linear.y+sin(h)*carState[4])*t),
-        //                  det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
-        OBB obs(Vector2D(det[i].obb.center.x + det[i].vel.linear.x*t,
-                         det[i].obb.center.y + det[i].vel.linear.y*t),
-                         det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
+        OBB obs(Vector2D(det[i].obb.center.x + (det[i].vel.linear.x+cos(h)*carState[4])*t,
+                        det[i].obb.center.y + det[i].vel.linear.y*t),
+                        det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
         obstacleVector.push_back(obs);
     }
 
@@ -37,8 +34,14 @@ bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::
     // Check if the trajectory2d obb separating axis theorem2d obb separating axis theorem collides with obstacles
     
     for(int index = 0; index !=T.size(); index++){
-        // double t = T[index][6];
-        double t = 0;
+        double t;
+        if (obs_use_pred){
+            t = T[index][6];
+        }else{
+            t = 0;
+        }
+        
+        // double t = 0;
         vector<OBB> obstacleVector = getOBBvector(ptrPub,det,t,carState);
         Vector2D vPos(T[index][0]+1.424*cos(T[index][2]),T[index][1]+1.424*sin(T[index][2]));
         ROS_WARN_STREAM_THROTTLE(5,"In CD: Check vehicle dimensions");
