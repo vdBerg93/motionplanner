@@ -4,14 +4,14 @@
 #include "rrt/collision.h"
 
 vector<OBB> getOBBvector(const vector<car_msgs::Obstacle2D>& det, const double& t, const vector<double>& carState){
-    ROS_WARN_STREAM_THROTTLE(5,"IN CD - getOBBVec: make carstate variable");
-    // vector<double> carState = {0,0,0,0,0,0,0};
-    
     vector<OBB> obstacleVector;
     for(int i = 0; i!=det.size(); i++){
         // Get OBB for future state
         double h = det[i].obb.center.theta;
-        OBB obs(Vector2D(det[i].obb.center.x + (det[i].vel.linear.x+cos(h)*carState[4])*t,
+        // OBB obs(Vector2D(det[i].obb.center.x + (det[i].vel.linear.x+cos(h)*carState[4])*t,
+        //                 det[i].obb.center.y + det[i].vel.linear.y*t),
+        //                 det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
+        OBB obs(Vector2D(det[i].obb.center.x + det[i].vel.linear.x*t,
                         det[i].obb.center.y + det[i].vel.linear.y*t),
                         det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
         obstacleVector.push_back(obs);

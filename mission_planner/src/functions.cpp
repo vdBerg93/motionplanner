@@ -7,7 +7,18 @@ void transformPoseWorldToCar(vector<double>& state, const vector<double>& carPos
 // void sendMotionRequest(const ros::Publisher* ptrPubMP, const vector<double>& goal, const double& Vmax);
 
 struct MsgManager{
-    MsgManager(): confirmed(0), goalReceived(0){}
+    void initializeGoal(){
+        goalW = initialGoal;
+        Vgoal = getGoalVelocity();
+        ros::param::get("max_velocity",Vmax);
+        cout<<"Maximum velocity = "<<Vmax<<" m/s"<<endl;
+        assert(Vmax<=8.33); // Speed limit
+        goalReceived =true;
+    }
+    MsgManager(): confirmed(0), goalReceived(0){
+        initializeGoal();
+        carPose.push_back(0); carPose.push_back(0); carPose.push_back(0); carPose.push_back(0); 
+    }
     vector<double> carPose;
     double Vgoal, Vmax;
     vector<double> goalW, goalC;
@@ -60,7 +71,7 @@ void MsgManager::sendMotionRequest(){
     req.vmax = Vmax;
     req.bend = false;
     // cout<<"Goal (map): "<<"["<<goalW[0]<<", "<<goalW[1]<<", "<<goalW[2]<<", "<<goalW[3]<<"]"<<endl;
-    cout<<"Goal (car): "<<"["<<goalC[0]<<", "<<goalC[1]<<", "<<goalC[2]<<", "<<goalC[3]<<"]"<<endl;
+    ROS_DEBUG_STREAM("Goal (car): "<<"["<<goalC[0]<<", "<<goalC[1]<<", "<<goalC[2]<<", "<<goalC[3]<<"]");
 
     ptrPubMP->publish(req);
 }

@@ -221,13 +221,15 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 		marker.points[0].x = obsArray[j].obb.center.x;
 		marker.points[0].y = obsArray[j].obb.center.y;
 		marker.points[0].z = 0;
-		ROS_WARN_ONCE("IN PCL_CONV PUBLISH: velocity of ego vehicle is fixed");
-		// marker.points[1].x = obsArray[j].obb.center.x + 5*(obsArray[j].vel.linear.x+cos(obsArray[j].obb.center.theta)*carState[4]); // Add EGO velocity 33m/s
-		// marker.points[1].y = obsArray[j].obb.center.y + 5*(obsArray[j].vel.linear.y+sin(obsArray[j].obb.center.theta)*carState[4]);
-		marker.points[1].x = obsArray[j].obb.center.x + 5*(obsArray[j].vel.linear.x+carState[4]); // Add EGO velocity 33m/s
-		marker.points[1].y = obsArray[j].obb.center.y + 5*obsArray[j].vel.linear.y;
-		// marker.points[1].x = obsArray[j].obb.center.x;
-		// marker.points[1].y = obsArray[j].obb.center.y;
+		// ROS_WARN_ONCE("IN PCL_CONV PUBLISH: velocity of ego vehicle is fixed");
+		double Vx_C = obsArray[j].vel.linear.x; 
+		double Vy_C = obsArray[j].vel.linear.y; 
+		// Transform form car to world coordinates
+		// double vx_W = cos(-carState[2])*Vx_C + sin(-carState[2])*Vy_C;
+		// double vy_W =-sin(-carState[2])*Vx_C + cos(-carState[2])*Vy_C;
+		// Draw prediction markers
+		marker.points[1].x = obsArray[j].obb.center.x + 5*Vx_C;
+		marker.points[1].y = obsArray[j].obb.center.y + 5*Vy_C;
 		marker.points[1].z = 0;
 		msg.markers.push_back(marker);
 	}

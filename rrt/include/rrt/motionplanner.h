@@ -32,6 +32,7 @@ struct MotionPlanner{
 		void publishPlan(const vector<Path>& plan);
 		void publishBestPath(const vector<Path>& path);
 		void storeCommit(const vector<Path>& commit);
+		bool resetPlanner(car_msgs::resetplanner::Request& req, car_msgs::resetplanner::Response& resp);
 		MotionPlanner(){
 			vector<double> emptystate = {0,0,0,0,0,0};
 			state = emptystate;

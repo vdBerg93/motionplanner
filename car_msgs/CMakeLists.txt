@@ -25,6 +25,7 @@ add_message_files(
 add_service_files(
   FILES
   getobstacles.srv
+  resetplanner.srv
 )
 
 generate_messages(

@@ -1,8 +1,17 @@
 //#######################################################
 //## Object detection for Prius Automated Vehicle #######
 //#######################################################
+#include <vector>
 using namespace std;
 bool DEBUG = 0;
+
+void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose);
+template<class T>
+void rotateVector2D(T& X, T& Y, const T& angle){
+	T Xnew =  cos(angle)*X + sin(angle)*Y;
+	T Ynew = -sin(angle)*X + cos(angle)*Y;
+	X = Xnew; Y = Ynew;
+}
 
 // Global variables
 double Kalman_gain_pos{0.1};
@@ -33,10 +42,9 @@ int main (int argc, char** argv)
 	ros::NodeHandle nh;				// Create nodehandle
 	// car_msgs::getobstacles::Response test;
 	Observer ObserveObject;
-
-	// Create a ROS subscriber for the input point cloud
-	// ros::Subscriber sub = nh.subscribe ("/point_cloud", 1, &Observer::callbackPointcloud,&ObserveObject);
-	// ros::Subscriber sub = nh.subscribe("/tf",1,&Observer::callbackTF, &ObserveObject);
+	for(int i = 0; i!=6; i++){
+		ObserveObject.carState.push_back(0);
+	}
 
 	// Rviz publisher
 	ros::Publisher pubR =nh.advertise<visualization_msgs::MarkerArray>("/visualization_markerarray", 100);
@@ -73,25 +81,22 @@ int main (int argc, char** argv)
 			geometry_msgs::Twist pedPos;
 			tf::StampedTransform tfPed;
 			geometry_msgs::Twist twistPed;
-			// ros::Time t = ros::Time::now();
-			// listener.lookupTwist("ped_link_1","base_link",ros::Time(0)),ros::Duration(0.1),pedPos);
+			// Lookup transformation of pedestrian link
     		ros::Time now = ros::Time::now();
     		listener.waitForTransform("base_link","ped_link_1", now, ros::Duration(3.0));
     		listener.lookupTransform("base_link", "ped_link_1", now, tfPed);
 			listener.lookupTwist("base_link", "ped_link_1",now, ros::Duration(0.25), twistPed);
-
 			// Update obstacle vector from detection
-			// ROS_INFO_STREAM("Clearing vector..");
 			car_msgs::Obstacle2D pedObs;
-			// pedObs.obb.center.x = tfPed.getOrigin().x();
-			// pedObs.obb.center.y = tfPed.getOrigin().y();
 			pedObs.obb.center.x = tfPed.getOrigin().x();
 			pedObs.obb.center.y = tfPed.getOrigin().y();
 			pedObs.obb.center.theta = 0;
 			pedObs.obb.size_x = 1.5; pedObs.obb.size_y = 1.5;
-			pedObs.vel.linear.x = twistPed.linear.x;
+			// Calculate velocity w.r.t. car in world coordinates
+			vector<double> state = ObserveObject.carState;
+			// Include ego vehicle velocity
+			pedObs.vel.linear.x = twistPed.linear.x + ObserveObject.carState[4];
 			pedObs.vel.linear.y = twistPed.linear.y;
-			// pedObs.vel = twistPed;
 			// Pushback in vector
 			ObserveObject.Obs.clear();
 			ObserveObject.Obs.push_back(pedObs);
@@ -106,7 +111,6 @@ int main (int argc, char** argv)
 		}
 		ros::spinOnce();
 		r.sleep();
-		// ROS_INFO_STREAM("Spinned once.");
 	}
 }
 
@@ -123,4 +127,12 @@ int main (int argc, char** argv)
 			ObserveObject.sendMarkerMsg(ObserveObject.Obs);
 			// ROS_INFO_STREAM("Sent marker message...");
 			ROS_INFO_STREAM("Updated obstacles and trackers.");
+
+// Homogenous transformation from world to car
+void transformPointWorldToCar(double& Xw, double& Yw, const vector<double>& carPose){
+	double Xc = Xw*cos(carPose[2]) - carPose[0]*cos(carPose[2]) - carPose[1]*sin(carPose[2]) + Yw*sin(carPose[2]);
+    double Yc = Yw*cos(carPose[2]) - carPose[1]*cos(carPose[2]) + carPose[0]*sin(carPose[2]) - Xw*sin(carPose[2]);
+	Xw = Xc; Yw = Yc;
+}
+
 */

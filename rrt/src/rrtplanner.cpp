@@ -17,9 +17,9 @@ MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts,
 void MyRRT::addInitialNode(const vector<double>& state){
 	// Set the first node in the tree at the current preview point of the lateral controller
 	MyReference ref; 
-    double xend = state[0]+cos(state[2])*ctrl_dla; 								// Xpreview
-    double yend = state[1]+sin(state[2])*ctrl_dla;								// Ypreview
-    int N = floor( sqrt( pow(xend,2) + pow(yend,2) )/ref_res);// Size
+	// double xend {ctrl_dla}, yend {0}, res{0.1};
+	double xend {1}, yend{0}, res{0.1};
+	int N = floor(sqrt( pow(xend,2) + pow(yend,2))/res);
     ref.x = LinearSpacedVector(0,xend,N);								// Reference (x)
     ref.y = LinearSpacedVector(0,yend,N);								// Reference (y)
     for(int i = 0; i!=N; i++){													// Reference (v)
@@ -33,10 +33,14 @@ void MyRRT::addInitialNode(const vector<double>& state){
 }
 
 double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
+	ROS_DEBUG_STREAM("In initialization function");
 	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
 	double Tp = 0;
+	assert(carState.size()>=6);
 	// If committed path is empty, initialize tree with reference at (Dla,0)
 	if (path.size()==0){
+		ROS_DEBUG_STREAM("No committed path. Adding initial node at preview point...");
+		assert(carState.size()>=6);
 		RRT.addInitialNode(carState);
 		ROS_INFO_STREAM("Initialized empty tree.");
 		return Tp;
@@ -78,7 +82,7 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 	Node node(path.back().tra.back(), -1, path.back().ref, path.back().tra,0,0,0);
 	node.state[6] = Tp;
 	RRT.tree.push_back(node);
-	cout<<"Initialized tree with last committed reference."<<endl;
+	ROS_DEBUG_STREAM("Initialized tree with last committed reference.");
 
 	return Tp;
 }
@@ -129,7 +133,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 	// #### GOAL BIASED EXPANSION ####
 	// Loop through the added nodes and try a goal expansion
 	if ( node_added && feasibleGoalBias(RRT) ) { 
-		if(debug_mode){cout<<"Doing goal expansion..."<<endl;}
+		ROS_DEBUG_STREAM("Doing goal expansion...");
 		MyReference ref_goal = getGoalReference(veh, RRT.tree.back(), RRT.goalPose);
 		Simulation sim_goal(RRT,RRT.tree.back().state, ref_goal,veh,true,true,RRT.tree.back().ref.v.back());				
 		
@@ -159,7 +163,7 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 geometry_msgs::Point sampleAroundVehicle(const vector<double> goalPose){
 	double dGoal = sqrt( pow(goalPose[0],2) + pow(goalPose[1],2) );
 	double goalHeading = atan2( goalPose[1], goalPose[0] );
-	double latMin {-5}, latMax{5};
+	double latMin {-7}, latMax{7};
 	
 	geometry_msgs::Point sample;	
 	double rLong = static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(dGoal+10)));

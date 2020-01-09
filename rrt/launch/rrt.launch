@@ -13,7 +13,7 @@
 		pkg="rrt"
 		type="rrt_node"
 		name="rrt_node"
-		output="screen"
+		output="log"
 		required="true"
 	/>
 	<!-- Start the mission planner -->
@@ -21,6 +21,7 @@
 		pkg="mission_planner"
 		type="mission_planner_node"
 		name="mission_planner_node"
+		output="screen"
 		required="true"
 	/>
 	<!-- State estimator node -->
@@ -28,6 +29,20 @@
 		pkg="state_estimator"
 		type="state_estimator_node"
 		name="state_estimator_node"
+		respawn="true"
+	/>
+	<!-- Obstacle tracker-->
+	<node
+		pkg="obstacle_tracker"
+		type="obstacle_tracker_node"
+		name="obstacle_tracker_node"
+		respawn="true"
+	/>
+	<!-- Obstacle tracker-->
+	<node
+		pkg="rqt_reconfigure"
+		type="rqt_reconfigure"
+		name="rqt_reconfigure"
 		respawn="true"
 	/>
 	<!-- Start the simulation

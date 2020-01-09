@@ -15,8 +15,18 @@ using namespace std;
 #include "car_msgs/MotionRequest.h"
 #include "car_msgs/State.h"
 #include "car_msgs/MotionResponse.h"
+#include "car_msgs/resetplanner.h"
+
+//reset msgs
+#include <std_srvs/Empty.h>
+#include <robot_localization/SetPose.h>
+
+const vector<double>& initialGoal {40,0,0,0};
 
 #include "functions.cpp"
+bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose);
+
+
 
 int main( int argc, char** argv ){	
 	// Initialize node
@@ -32,24 +42,47 @@ int main( int argc, char** argv ){
     ros::Publisher pubMP = nh.advertise<car_msgs::MotionRequest>("/motionplanner/request",0);
     msgManager.ptrPubMP = &pubMP;
     ros::Rate rate(5);
+
+    // Define simulation reset objects
+    // ros::ServiceClient reset_simulation_client_ = nh.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
+    // ros::ServiceClient reset_ekf_client_        = nh.serviceClient<robot_localization::SetPose>("/set_pose");
+    ros::ServiceClient reset_planner_client_    = nh.serviceClient<car_msgs::resetplanner>("motionplanner/reset");
+
+    ros::ServiceClient reset_simulation_client_, reset_ekf_client_;
+    reset_simulation_client_ = nh.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
+    reset_ekf_client_ = nh.serviceClient<robot_localization::SetPose>("/set_pose");
+
     // Give control to ROS for goal definition
     bool doReplanning;
     ros::param::get("/motionplanner/replan",doReplanning);
     
+    // msgManager.goalReceived = true;
     while (ros::ok()){
         if (msgManager.goalReceived){
             msgManager.sendMotionRequest();
-            // cout<<"Press any key to continue to next iteration"<<endl;
-            // cin.get();
-            // if (!doReplanning){
-            //     sleep(10000);
-            // }
+
+            if (goalReachedCheck(msgManager.goalW,msgManager.carPose)){
+                ROS_WARN_STREAM("Goal reached! Resetting simulation...");
+                
+                std_srvs::Empty reset_msg_;
+                robot_localization::SetPose reset_pose_msg_;
+
+                reset_simulation_client_.call(reset_msg_);
+                reset_ekf_client_.call(reset_pose_msg_);
+
+            }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }
-
         ros::spinOnce();
         rate.sleep();
-        
     }
 }
+
+bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose){
+    return ( (abs(carState[0]-goalPose[0])<2));
+}
+
+
+
+

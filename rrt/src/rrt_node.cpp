@@ -1,5 +1,5 @@
 // Global vars for debugging and plotting
-bool draw_tree =1;
+bool draw_tree =0;
 bool draw_obs = 0;
 bool draw_final_path = 0;
 bool debug_mode = 0;
@@ -8,7 +8,7 @@ bool debug_velocity = false;
 bool draw_states = 0;
 bool debug_sim = 0;
 bool commit_path = false;
-bool obs_use_pred = true;
+bool obs_use_pred = false;
 double Tcommit {0.25};
 
 // Global variables
@@ -46,6 +46,7 @@ int sim_count{0};
 #include "car_msgs/Trajectory.h"
 #include "car_msgs/MotionPlan.h"
 #include "car_msgs/Obstacle2D.h"
+#include "car_msgs/resetplanner.h"
 
 // Include header files
 #include "rrt/functions.h"
@@ -107,6 +108,9 @@ int main( int argc, char** argv ){
 	// State subscriber
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
 	// ros::Subscriber subState = nh.subscribe("/amcl_pose",1,&MotionPlanner::updateState, &motionPlanner);
+
+	// Reset service
+	ros::ServiceServer server = nh.advertiseService("/motionplanner/reset",&MotionPlanner::resetPlanner,&motionPlanner);
 
 	// Register client for obstacle detector
 	ros::ServiceClient client = nh.serviceClient<car_msgs::getobstacles>("getobstacles");

@@ -10,13 +10,13 @@ void enforceConstraints(const double& min, const double& max, double& val){
 
 state_type VehicleODE(ControlCommand& ctrl, state_type& x, const Vehicle& veh){
     state_type dx(7);
-	double Gss = 1/( 1 + pow((x[4]/20),2)); 	// Sideslip transfer function
+	double Gss = 1/( 1 + pow((x[4]/veh.Vch),2)); 	// Sideslip transfer function
 	dx[0] = x[4]*cos(x[2]);            			// xdot
     dx[1] = x[4]*sin(x[2]);            			// ydot
-    dx[2] = (x[4]/2.885)*tan(x[3])*Gss;			// thetadot
-    dx[3] = (1/0.3)*(ctrl.dc-x[3]);  			// deltadot
+    dx[2] = (x[4]/veh.L)*tan(x[3])*Gss;			// thetadot
+    dx[3] = (1/veh.Td)*(ctrl.dc-x[3]);  			// deltadot
     dx[4] = x[5];                      			// vdot
-    dx[5] = (1/0.3)*(ctrl.ac-x[5]);  			// adot
+    dx[5] = (1/veh.Ta)*(ctrl.ac-x[5]);  			// adot
     dx[6] = 1;                          		// dt
 	// Constraints
 	enforceConstraints(veh.amin, veh.amax, dx[4]);
@@ -99,7 +99,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 
 		// Stop simulation when end of reference is reached and velocity < terminate velocity
 		double Verror = (x[4]-ref.v.back());
-		if (control.endreached&&abs(Verror<0.05)){
+		if (control.endreached&&abs(Verror<0.1)){
 			if(wasNearGoal&&debug_sim){
 				ROS_WARN_STREAM("Was near goal but did not reach! Egoalvel= "<<Verror<<", Eprofile="<<(x[4]-ref.v[control.IDwp]));
 				ROS_WARN_STREAM("Dist2goal= "<<dist_to_goal<<" head error= "<<goal_heading_error<<" dla= "<<ctrl_dla);
@@ -112,11 +112,11 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		if ((dist_to_goal<=1)&&(goal_heading_error<0.05)){
 			double Verror = abs(x[4]-RRT.goalPose[3]);
 			wasNearGoal = true;
-			if (Verror<0.1){
+			// if (Verror<0.1){
 				if(debug_sim){	ROS_INFO_STREAM("goal reached");}
-				ROS_WARN_STREAM_THROTTLE(1,"Goal reached in "<<stateArray.back()[6]<<" seconds!");
+				ROS_INFO_STREAM_THROTTLE(1,"Goal reached in "<<stateArray.back()[6]<<" seconds!");
 				goalReached = true; return;
-			}
+			// }
 		}
 		if (draw_states){
 			// cout<<"x="<<x[0]<<", y="<<x[1]<<", ac="<<ctrlCmd.ac<<", a="<<x[5]<<", v="<<x[4]<<endl;

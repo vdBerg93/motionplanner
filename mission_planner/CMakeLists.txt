@@ -10,6 +10,8 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   car_msgs
   geometry_msgs
+  robot_localization
+  std_srvs
   roscpp
   rospy
 )

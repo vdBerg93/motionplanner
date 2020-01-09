@@ -12,6 +12,7 @@ class Observer{
         }   
         void callbackOdometry(const nav_msgs::Odometry& msg);
         void callbackJoints(const sensor_msgs::JointState& msg);
+        // void callbackSteer(const prius_msgs::Control& msg);
         void publishStates();
 };
 

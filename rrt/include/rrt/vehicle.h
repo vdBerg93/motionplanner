@@ -56,6 +56,7 @@ class Vehicle{
             double Cr = 22201;      // From specs
             double m = 950+640;     // From specs
             Kus = (m/L)*(lr/Cf - lf/Cr);
+            Vch = 20;
         }
 };
 

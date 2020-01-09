@@ -16,6 +16,13 @@ void MotionPlanner::updateState(car_msgs::State msg){
 }
 
 
+bool MotionPlanner::resetPlanner(car_msgs::resetplanner::Request& req, car_msgs::resetplanner::Response& resp)
+{
+	// motionplan.clear();
+	return true;
+}
+
+
 
 // Print a path to the terminal
 void showPath(const vector<Path>& path){
@@ -68,13 +75,15 @@ void showNode(const Node& node){
 // Motion planner callback
 void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	fail_acclimit=0; fail_collision=0; fail_iterlimit=0; sim_count = 0;
-
-	cout<<"----------------------------------"<<endl<<"Received request, processing..."<<endl;
+	ROS_INFO_STREAM("---------"<<endl<<"Received request, processing...");
 	// Update variables
 	Vehicle veh; veh.setPrius();	
 	vector<double> worldState = state;
 	vector<double> carPose = transformStateToLocal(worldState);
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
+	// debug fixing of ref_res =nan
+	assert(!isnan(carPose[0])); assert(!isnan(carPose[1])); assert(!isnan(carPose[2])); assert(!isnan(carPose[3])); assert(!isnan(carPose[4]));
+	assert(!isnan(ref_res)); 
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
 	ROS_INFO_STREAM("Considering "<<det.size()<<" obstacles.");
@@ -103,17 +112,17 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	RRT.det = det; RRT.carState = carPose; 
 	// cout<<"Created tree object"<<endl;
+	ROS_INFO_STREAM("Initializing tree...");
 	double Tp = initializeTree(RRT, veh, motionplan, carPose);
-
-	// cout<<"Committed path time= "<<Tp<<endl;
+	ROS_INFO_STREAM("Committed path time= "<<Tp);
 
 	// Build the tree
 	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
 	};
-	cout<<"Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations"<<endl;
-	cout<<"Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count<<endl;
+	ROS_INFO_STREAM("Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations");
+	ROS_INFO_STREAM("Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count);
 
 	// Select best path
 	vector<Node> bestNodes = extractBestPath(RRT.tree,pubPtr);
@@ -129,10 +138,10 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	plan = convertNodesToPath(bestNodes);
 	plan.insert(plan.begin(), motionplan.begin(), motionplan.end());
 	
-	if(Tp<Tcommit){
+	if((Tp<Tcommit)&&commit_path){
 		commit = getCommittedPath(bestNodes, Tp);
 		// showPath(commit);
-		cout<<"Total committed path time: "<<Tp<<" sec"<<endl;
+		ROS_INFO_STREAM("Total committed path time: "<<Tp<<" sec");
 	}else{
 		ROS_INFO_STREAM("No commitment required.");
 	}
@@ -154,7 +163,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	pubMPC->publish(msg);
 
 	publishPathToRviz(plan,pubPtr);	
-	cout<<"Replied to request..."<<endl<<"----------------------------------"<<endl;
+	ROS_INFO_STREAM("Replied to request..."<<endl<<"-------------------------");
 }
 
 // Prepare motion response message
