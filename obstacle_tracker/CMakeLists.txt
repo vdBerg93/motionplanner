@@ -19,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 generate_dynamic_reconfigure_options(
-  cfg/Test.cfg
+  cfg/Tracker.cfg
   #...
 )
 

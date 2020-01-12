@@ -20,7 +20,7 @@ struct Observer{
 	// Callback functions
 	void callbackTF(const tf2_msgs::TFMessage& msgIn);
     bool callbackService(car_msgs::getobstacles::Request &req, car_msgs::getobstacles::Response &resp);
-	void callbackParameter(pcl_converter_node::TestConfig &config, uint32_t level);
+	void callbackParameter(obstacle_tracker_node::TrackerConfig &config, uint32_t level);
 	void callbackState(const car_msgs::State& msg);
 	// Rviz publishing
 	void sendMarkerMsg(const vector<car_msgs::Obstacle2D>& det);
@@ -30,6 +30,8 @@ struct Observer{
 	ros::Publisher* pubMPC;
 	tf::TransformListener* tfListener;
 };
+
+Observer* ptrObs;
 
 void Observer::callbackState(const car_msgs::State& msg){
 	carState.clear(); 
@@ -44,13 +46,16 @@ bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::g
 	return true;
 }
 
-void callbackParameter(pcl_converter_node::TestConfig &config, uint32_t level){
-	ROS_WARN_STREAM("Received reconfigure request. Updating parameters.");
+void callbackParameter(obstacle_tracker_node::TrackerConfig &config, uint32_t level){
+
 	Kalman_gain_pos = 		config.Kalman_gain_pos;
 	Kalman_gain_vel = 		config.Kalman_gain_vel;
 	Kalman_gain_meas = 		config.Kalman_gain_meas;
-	PCL_cluster_maxit = 	config.PCL_cluster_maxit;
-	PCL_cluster_treshold = 	config.PCL_cluster_treshold;
+	OBB_size = config.OBB_size;
+	ptrObs->trackers.clear();
+	// PCL_cluster_maxit = 	config.PCL_cluster_maxit;
+	// PCL_cluster_treshold = 	config.PCL_cluster_treshold;
+		ROS_WARN_STREAM("Received reconfigure request. Updated parameters and deleted trackers.");
 }
 
 void Observer::callbackTF(const tf2_msgs::TFMessage& msgIn){

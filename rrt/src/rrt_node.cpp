@@ -1,5 +1,5 @@
 // Global vars for debugging and plotting
-bool draw_tree =0;
+bool draw_tree =1;
 bool draw_obs = 0;
 bool draw_final_path = 0;
 bool debug_mode = 0;
@@ -7,8 +7,8 @@ bool debug_reference = 0;
 bool debug_velocity = false;
 bool draw_states = 0;
 bool debug_sim = 0;
-bool commit_path = false;
-bool obs_use_pred = false;
+bool commit_path = true;
+bool obs_use_pred = true;
 double Tcommit {0.25};
 
 // Global variables

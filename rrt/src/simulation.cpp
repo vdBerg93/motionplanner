@@ -71,6 +71,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		if (Dobs==0){ 	
 			endReached = false; 	fail_collision++;	return;
 		}
+		assert( (Dobs>=0) && "Negative distance to obstacle!");
 
 		// ****** UPDATE COSTS ********
 		costE += x[4]*sim_dt;

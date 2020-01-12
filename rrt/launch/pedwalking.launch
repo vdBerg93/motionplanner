@@ -32,7 +32,7 @@
 
   <!-- Launch Pedsim world -->
   <!-- <include file="$(find pedsim_simulator)/launch/ped_crossing.launch">  </include> -->
-  <!--include file="$(find pedsim_simulator)/launch/ped_walking.launch">  </include> -->
+  <include file="$(find pedsim_simulator)/launch/ped_walking.launch">  </include>
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 0 -y 0 -z 0 -model prius"/>
 
@@ -40,5 +40,11 @@
 
   <!-- Establish connection between pedsim and ros -->
   <!--node pkg="person_control"       type="person_control_node"       name="person_control_node"       output="screen" /-->
+
+
+<!-- <include file="$(find lmpcc)/launch/lmpcc.launch"> </include> -->
+  <!-- <include file="$(find lmpcc_obstacle_feed)/launch/lmpcc_obstacle_feed.launch"> </include> -->
+  
+
 
 </launch>

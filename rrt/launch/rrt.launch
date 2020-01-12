@@ -13,7 +13,7 @@
 		pkg="rrt"
 		type="rrt_node"
 		name="rrt_node"
-		output="log"
+		output="screen"
 		required="true"
 	/>
 	<!-- Start the mission planner -->
@@ -21,7 +21,7 @@
 		pkg="mission_planner"
 		type="mission_planner_node"
 		name="mission_planner_node"
-		output="screen"
+		output="log"
 		required="true"
 	/>
 	<!-- State estimator node -->

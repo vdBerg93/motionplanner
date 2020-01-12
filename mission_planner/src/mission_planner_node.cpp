@@ -21,7 +21,7 @@ using namespace std;
 #include <std_srvs/Empty.h>
 #include <robot_localization/SetPose.h>
 
-const vector<double>& initialGoal {40,0,0,0};
+const vector<double>& initialGoal {50,0,0,0};
 
 #include "functions.cpp"
 bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose);
@@ -44,13 +44,9 @@ int main( int argc, char** argv ){
     ros::Rate rate(5);
 
     // Define simulation reset objects
-    // ros::ServiceClient reset_simulation_client_ = nh.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
-    // ros::ServiceClient reset_ekf_client_        = nh.serviceClient<robot_localization::SetPose>("/set_pose");
     ros::ServiceClient reset_planner_client_    = nh.serviceClient<car_msgs::resetplanner>("motionplanner/reset");
-
-    ros::ServiceClient reset_simulation_client_, reset_ekf_client_;
-    reset_simulation_client_ = nh.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
-    reset_ekf_client_ = nh.serviceClient<robot_localization::SetPose>("/set_pose");
+    ros::ServiceClient reset_simulation_client_ = nh.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
+    ros::ServiceClient reset_ekf_client_= nh.serviceClient<robot_localization::SetPose>("/set_pose");
 
     // Give control to ROS for goal definition
     bool doReplanning;
@@ -66,10 +62,11 @@ int main( int argc, char** argv ){
                 
                 std_srvs::Empty reset_msg_;
                 robot_localization::SetPose reset_pose_msg_;
+                car_msgs::resetplanner reset_planner_msg_;
 
                 reset_simulation_client_.call(reset_msg_);
                 reset_ekf_client_.call(reset_pose_msg_);
-
+                reset_planner_client_.call(reset_planner_msg_);
             }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
@@ -80,7 +77,7 @@ int main( int argc, char** argv ){
 }
 
 bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose){
-    return ( (abs(carState[0]-goalPose[0])<2));
+    return ( (abs(carState[0]-goalPose[0])<5));
 }
 
 

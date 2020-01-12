@@ -324,6 +324,7 @@ vector<Node> extractBestPath(vector<Node> tree, ros::Publisher* ptrPub){
 		bestPath.push_back(tree[pair_vector.front().first]);
 		// Backtracking
 		int parent = bestPath.front().parentID;
+		ROS_WARN_STREAM("Best path cost = "<<tree[parent].costS);
 		while (parent!=0){
 			bestPath.insert(bestPath.begin(), tree[parent]);
 			parent = bestPath.front().parentID;

@@ -5,7 +5,6 @@
   <description>The obstacle_tracker package</description>
 
   <maintainer email="b.h.a.vandenberg@student.tudelft.nl">B van den Berg</maintainer>
-  <maintainer email="q.w.a.vanderslot@student.tudelft.nl">K van der Slot</maintainer>
   <license>TODO</license>
 
   <depend>tf</depend>

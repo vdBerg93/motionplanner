@@ -18,7 +18,7 @@ void MotionPlanner::updateState(car_msgs::State msg){
 
 bool MotionPlanner::resetPlanner(car_msgs::resetplanner::Request& req, car_msgs::resetplanner::Response& resp)
 {
-	// motionplan.clear();
+	motionplan.clear();
 	return true;
 }
 
@@ -160,9 +160,11 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	// Filtered message for MPC controller
 	car_msgs::Trajectory msg = generateMPCmessage(plan);
 	filterMPCmessage(msg);
-	pubMPC->publish(msg);
+	if(msg.x.size()>=3){
+		pubMPC->publish(msg);
+		publishPathToRviz(plan,pubPtr);	
+	}
 
-	publishPathToRviz(plan,pubPtr);	
 	ROS_INFO_STREAM("Replied to request..."<<endl<<"-------------------------");
 }
 
@@ -176,11 +178,33 @@ car_msgs::Trajectory generateMPCmessage(const vector<Path>& path){
 			tra.theta.push_back(it->tra[i][2]);
 			tra.delta.push_back(it->tra[i][3]);
 			tra.v.push_back(it->tra[i][4]);
+			// tra.v.push_back(6);
 			tra.a.push_back(it->tra[i][5]);
 			tra.a_cmd.push_back(it->tra[i][8]);
 			tra.d_cmd.push_back(it->tra[i][9]);
 		}
 	}
+
+	// jump:
+	// Check for duplicates
+	// for(int i = 0; i != (tra.x.size()-1); i++){
+	// 	if( ((tra.x[i]-tra.x[i+1])<0.0001)&&((tra.y[i]-tra.y[i+1])<0.0001)){
+	// 		tra.x.erase(tra.x.begin()+i);
+	// 		tra.y.erase(tra.y.begin()+i);
+	// 		tra.theta.erase(tra.theta.begin()+i);
+	// 		tra.v.erase(tra.v.begin()+i);
+	// 		break;
+	// 	}
+	// }
+
+	// // Double check
+	// for(int i = 0; i != (tra.x.size()-1); i++){
+	// 	if( (tra.x[i]==tra.x[i+1])&&(tra.y[i]==tra.y[i+1])){
+	// 		ROS_ERROR_STREAM("Still duplicates in message! Fix this code!");
+	// 		break;
+	// 	}
+	// }
+
 	return tra;
 }
 
@@ -204,13 +228,17 @@ void filterMPCmessage(car_msgs::Trajectory& msg){
 		}
 	}
 	// Push back last point
-	msgFiltered.x.push_back(msg.x.back());
-	msgFiltered.y.push_back(msg.y.back());
-	msgFiltered.theta.push_back(msg.theta.back());
-	msgFiltered.v.push_back(msg.v.back());
-	msgFiltered.a.push_back(msg.a.back());
-	msgFiltered.a_cmd.push_back(msg.a_cmd.back());
-	msgFiltered.d_cmd.push_back(msg.d_cmd.back());
+	// bool B1 = msgFiltered.x.back()==msg.x.back();
+	// bool B2 = msgFiltered.y.back()==msg.y.back();
+	// if ( !(B1&B2)){
+	// 	msgFiltered.x.push_back(msg.x.back());
+	// 	msgFiltered.y.push_back(msg.y.back());
+	// 	msgFiltered.theta.push_back(msg.theta.back());
+	// 	msgFiltered.v.push_back(msg.v.back());
+	// 	msgFiltered.a.push_back(msg.a.back());
+	// 	msgFiltered.a_cmd.push_back(msg.a_cmd.back());
+	// 	msgFiltered.d_cmd.push_back(msg.d_cmd.back());
+	// }
 	msg = msgFiltered;
 }
 
