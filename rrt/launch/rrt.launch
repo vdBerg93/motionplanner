@@ -13,7 +13,7 @@
 		pkg="rrt"
 		type="rrt_node"
 		name="rrt_node"
-		output="screen"
+		output="log"
 		required="true"
 	/>
 	<!-- Start the mission planner -->
@@ -36,6 +36,7 @@
 		pkg="obstacle_tracker"
 		type="obstacle_tracker_node"
 		name="obstacle_tracker_node"
+		output="screen"
 		respawn="true"
 	/>
 	<!-- Obstacle tracker-->

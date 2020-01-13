@@ -4,7 +4,7 @@
   <arg name="gui" default="false" />
   <arg name="headless" default="false" />
   <!-- <arg name="world_name" default="$(find car_simulation)/worlds/pedestrian_crossing_fix.world" /> -->
-  <arg name="world_name" default="$(find car_simulation)/worlds/ped_crossing.world" />
+  <arg name="world_name" default="$(find car_simulation)/worlds/twoped_crossing.world" />
   <arg name="model" default="$(find prius_description)/urdf/prius.urdf"/>
   <arg name="rvizconfig" default="$(find car_simulation)/rviz/demo.rviz" />
 
@@ -31,7 +31,7 @@
   <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 odom base_link"/>
 
   <!-- Launch Pedsim world -->
-  <include file="$(find pedsim_simulator)/launch/ped_crossing.launch">  </include>
+  <include file="$(find pedsim_simulator)/launch/twoped_crossing.launch">  </include>
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 0 -y 0 -z 0 -model prius"/>
 

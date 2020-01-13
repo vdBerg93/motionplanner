@@ -185,6 +185,7 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 
 		// Line strip is red
 		marker.color.r = 1.0;
+		marker.color.b = 1.0;
 		marker.color.a = 1.0;
 		marker.lifetime = ros::Duration(0.1);
 		geometry_msgs::Point p;// int i = 0;
@@ -218,6 +219,7 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 
 		// Line strip is red
 		marker.color.r = 1.0;
+		marker.color.b = 1.0;
 		marker.color.a = 1.0;
 		marker.lifetime = ros::Duration(0.1);
 
@@ -226,15 +228,10 @@ void Observer::sendMarkerMsg(const vector<car_msgs::Obstacle2D>& obsArray){
 		marker.points[0].x = obsArray[j].obb.center.x;
 		marker.points[0].y = obsArray[j].obb.center.y;
 		marker.points[0].z = 0;
-		// ROS_WARN_ONCE("IN PCL_CONV PUBLISH: velocity of ego vehicle is fixed");
-		double Vx_C = obsArray[j].vel.linear.x; 
-		double Vy_C = obsArray[j].vel.linear.y; 
-		// Transform form car to world coordinates
-		// double vx_W = cos(-carState[2])*Vx_C + sin(-carState[2])*Vy_C;
-		// double vy_W =-sin(-carState[2])*Vx_C + cos(-carState[2])*Vy_C;
+
 		// Draw prediction markers
-		marker.points[1].x = obsArray[j].obb.center.x + 5*Vx_C;
-		marker.points[1].y = obsArray[j].obb.center.y + 5*Vy_C;
+		marker.points[1].x = obsArray[j].obb.center.x + obsArray[j].vel.linear.x;
+		marker.points[1].y = obsArray[j].obb.center.y + obsArray[j].vel.linear.y;
 		marker.points[1].z = 0;
 		msg.markers.push_back(marker);
 	}

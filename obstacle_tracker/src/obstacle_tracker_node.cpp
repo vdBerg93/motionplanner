@@ -81,30 +81,42 @@ int main (int argc, char** argv)
 		if (startcount<Rate){
 			startcount++;
 		}else{
-			tf::StampedTransform tfPed;
+			tf::StampedTransform tfPed1, tfPed2;
 			// Lookup transformation of pedestrian link
     		ros::Time now = ros::Time::now();
 			listener.waitForTransform("map","ped_link_1", now, ros::Duration(3));
-    		listener.lookupTransform("map", "ped_link_1", now, tfPed);
-
+    		listener.lookupTransform("map", "ped_link_1", now, tfPed1);
+			listener.waitForTransform("map","ped_link_2", now, ros::Duration(3));
+    		listener.lookupTransform("map", "ped_link_2", now, tfPed2);
 			// Generate OBB
-			car_msgs::Obstacle2D pedObs;
-			pedObs.obb.center.x = tfPed.getOrigin().x();	
-			pedObs.obb.center.y = tfPed.getOrigin().y();
-			pedObs.obb.center.theta = 0;
-			pedObs.obb.size_x = OBB_size; 
-			pedObs.obb.size_y = OBB_size;
-
+			car_msgs::Obstacle2D pedObs1;
+			pedObs1.obb.center.x = tfPed1.getOrigin().x();	
+			pedObs1.obb.center.y = tfPed1.getOrigin().y();
+			pedObs1.obb.center.theta = 0;
+			pedObs1.obb.size_x = OBB_size; 
+			pedObs1.obb.size_y = OBB_size;
+			// Generate OBB
+			car_msgs::Obstacle2D pedObs2;
+			pedObs2.obb.center.x = tfPed2.getOrigin().x();	
+			pedObs2.obb.center.y = tfPed2.getOrigin().y();
+			pedObs2.obb.center.theta = 0;
+			pedObs2.obb.size_x = OBB_size; 
+			pedObs2.obb.size_y = OBB_size;
 			// Update obstacle vector
 			ObserveObject.Obs.clear();
-			ObserveObject.Obs.push_back(pedObs);
+			ObserveObject.Obs.push_back(pedObs1);
+			ObserveObject.Obs.push_back(pedObs2);
 			// Update KF
 			ObserveObject.updateTrackersKF();
 
 			// Transform from map to car coordinate
-			transformPointWorldToCar(ObserveObject.Obs.front().obb.center.x,ObserveObject.Obs.front().obb.center.y,ObserveObject.carState);
-			rotateVelocityVector(ObserveObject.Obs.front().vel.linear.x,ObserveObject.Obs.front().vel.linear.y,ObserveObject.carState);
-
+			for(int i = 0; i!=ObserveObject.Obs.size(); i++){
+				transformPointWorldToCar(ObserveObject.Obs[i].obb.center.x,ObserveObject.Obs[i].obb.center.y,ObserveObject.carState);
+				double Gain = 0.75;
+				ObserveObject.Obs[i].vel.linear.x = Gain*ObserveObject.Obs[i].vel.linear.x;
+				ObserveObject.Obs[i].vel.linear.y = Gain*ObserveObject.Obs[i].vel.linear.y;
+				rotateVelocityVector(ObserveObject.Obs[i].vel.linear.x,ObserveObject.Obs[i].vel.linear.y,ObserveObject.carState);
+			}
 			// Send MPC message
 			vision_msgs::Detection2DArray msg = generateMPCmessage(ObserveObject.Obs);
 			ObserveObject.pubMPC->publish(msg);
@@ -112,8 +124,10 @@ int main (int argc, char** argv)
 
 			ObserveObject.sendMarkerMsg(ObserveObject.Obs);
 			// Update velocities
-			ROS_INFO_STREAM("Updated. x="<<ObserveObject.Obs.front().obb.center.x<<", y="<<ObserveObject.Obs.front().obb.center.y<<
-							", Vx="<<ObserveObject.Obs.front().vel.linear.x<<", Vy="<<ObserveObject.Obs.front().vel.linear.y);
+			for(int i = 0; i!=ObserveObject.Obs.size(); i++){
+				ROS_INFO_STREAM("Updated. x="<<ObserveObject.Obs[i].obb.center.x<<", y="<<ObserveObject.Obs[i].obb.center.y<<
+								", Vx="<<ObserveObject.Obs[i].vel.linear.x<<", Vy="<<ObserveObject.Obs[i].vel.linear.y);
+			}
 		}
 		ros::spinOnce();
 		r.sleep();
