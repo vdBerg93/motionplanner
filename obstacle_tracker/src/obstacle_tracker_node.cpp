@@ -112,7 +112,7 @@ int main (int argc, char** argv)
 			// Transform from map to car coordinate
 			for(int i = 0; i!=ObserveObject.Obs.size(); i++){
 				transformPointWorldToCar(ObserveObject.Obs[i].obb.center.x,ObserveObject.Obs[i].obb.center.y,ObserveObject.carState);
-				double Gain = 0.75;
+				double Gain = 1;
 				ObserveObject.Obs[i].vel.linear.x = Gain*ObserveObject.Obs[i].vel.linear.x;
 				ObserveObject.Obs[i].vel.linear.y = Gain*ObserveObject.Obs[i].vel.linear.y;
 				rotateVelocityVector(ObserveObject.Obs[i].vel.linear.x,ObserveObject.Obs[i].vel.linear.y,ObserveObject.carState);

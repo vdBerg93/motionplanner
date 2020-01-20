@@ -36,10 +36,10 @@
 		pkg="obstacle_tracker"
 		type="obstacle_tracker_node"
 		name="obstacle_tracker_node"
-		output="screen"
+		output="log"
 		respawn="true"
 	/>
-	<!-- Obstacle tracker-->
+	<!-- Rqt reconfigure -->
 	<node
 		pkg="rqt_reconfigure"
 		type="rqt_reconfigure"

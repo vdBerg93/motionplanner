@@ -22,6 +22,7 @@ using namespace std;
 #include <robot_localization/SetPose.h>
 
 const vector<double>& initialGoal {50,0,0,0};
+int simCount = 0;
 
 #include "functions.cpp"
 bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose);
@@ -67,6 +68,8 @@ int main( int argc, char** argv ){
                 reset_simulation_client_.call(reset_msg_);
                 reset_ekf_client_.call(reset_pose_msg_);
                 reset_planner_client_.call(reset_planner_msg_);
+                simCount++;
+                ROS_ERROR_STREAM("Simulation count= "<<simCount);
             }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");

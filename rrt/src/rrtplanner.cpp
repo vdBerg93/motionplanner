@@ -80,9 +80,10 @@ double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector
 
 	// Initialize tree
 	Node node(path.back().tra.back(), -1, path.back().ref, path.back().tra,0,0,0);
-	node.state[6] = Tp;
+	// node.state[6] = Tp;
+	node.state[6] = 0;
 	RRT.tree.push_back(node);
-	ROS_DEBUG_STREAM("Initialized tree with last committed reference.");
+	ROS_WARN_STREAM("Initialized tree. Tp = "<<Tp);
 
 	return Tp;
 }
