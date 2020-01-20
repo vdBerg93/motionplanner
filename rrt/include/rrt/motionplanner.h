@@ -19,6 +19,8 @@ void filterMPCmessage(car_msgs::Trajectory& msg);
 // Motion planner object for handling services, callbacks & clients
 struct MotionPlanner{
 		vector<Path> motionplan; 		// Current motion plan in global coordinates
+		// vector<Node> lastNodes;			// Log best path for reducing path shifting
+		vector<Node> bestNodes;			// Logging best path as nodes
 		state_type state;
 		ros::ServiceClient* clientPtr;			// Pointer to client
 		ros::Publisher* pubPtr; 				// Pointer to Rviz markers

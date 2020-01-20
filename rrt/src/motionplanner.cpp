@@ -125,7 +125,9 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	ROS_INFO_STREAM("Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count);
 
 	// Select best path
-	vector<Node> bestNodes = extractBestPath(RRT.tree,pubPtr);
+	bestNodes.clear();
+	bestNodes = extractBestPath(RRT.tree,pubPtr);
+	
 	// Stop when tree is empty
 	if(bestNodes.size()==0){		
 		if(req.bend){	transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);}
@@ -140,6 +142,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	
 	if((Tp<Tcommit)&&commit_path){
 		commit = getCommittedPath(bestNodes, Tp);
+		storeCommit(commit);
 		// showPath(commit);
 		ROS_INFO_STREAM("Total committed path time: "<<Tp<<" sec");
 	}else{
@@ -147,15 +150,13 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	}
 	if(req.bend){
 			transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);
-			transformPathRoadToCar(commit,req.Cxy, req.Cxs,veh);
 			transformPathRoadToCar(plan,req.Cxy,req.Cxs,veh);
 	}
 	transformPathCarToWorld(motionplan,worldState);
-	transformPathCarToWorld(commit,worldState);
 	transformPathCarToWorld(plan,worldState);
 
 	// Publish committed part and add to motion plan
-	storeCommit(commit);
+	
 	publishPlan(plan); 
 	// Filtered message for MPC controller
 	car_msgs::Trajectory msg = generateMPCmessage(plan);
@@ -164,6 +165,8 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		pubMPC->publish(msg);
 		publishPathToRviz(plan,pubPtr);	
 	}
+
+	// Log nodes
 
 	ROS_INFO_STREAM("Replied to request..."<<endl<<"-------------------------");
 }

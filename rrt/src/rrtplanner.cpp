@@ -2,7 +2,7 @@
 #include "rrt/collision.h"
 #include "rrt/rrtplanner.h"
 #include "rrt/simulation.h"
-
+#include "rrt/transformations.h"
 using namespace std;
 
 MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy, const bool& _bend):
@@ -418,4 +418,32 @@ visualization_msgs::Marker createEmptyMsg(){
     msg.id = 0;
     msg.type = visualization_msgs::Marker::POINTS;
     return msg;    
+}
+
+void transformNodesToWorld(vector<Node>& nodes, const vector<double> carState){
+	for(auto it = nodes.begin(); it!= nodes.end(); it++){
+		transformStateCarToWorld(it->state,carState);
+		// Loop through reference and transform
+		for(int i = 0; i!=it->ref.x.size(); i++){
+			transformPointCarToWorld(it->ref.x[i],it->ref.y[i],carState);
+		}
+		// Loop through trajectory and transform
+		for(int j = 0; j!=it->tra.size(); j++){
+			transformPointCarToWorld(it->tra[j][0], it->tra[j][1], carState);
+		}
+	}
+}
+
+void transformNodesToCar(vector<Node>& nodes, const vector<double> carState){
+	for(auto it = nodes.begin(); it!= nodes.end(); it++){
+		transformStateWorldToCar(it->state,carState);
+		// Loop through reference and transform
+		for(int i = 0; i!=it->ref.x.size(); i++){
+			transformPointWorldToCar(it->ref.x[i],it->ref.y[i],carState);
+		}
+		// Loop through trajectory and transform
+		for(int j = 0; j!=it->tra.size(); j++){
+			transformPointWorldToCar(it->tra[j][0], it->tra[j][1], carState);
+		}
+	}
 }

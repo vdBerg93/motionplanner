@@ -1,5 +1,3 @@
-
-
 /**************************************
  **** TRANSFORMATIONS OF 2D POINTS ****
  *************************************/
@@ -257,5 +255,3 @@ void transformPathCarToRoad(vector<Path>& path,const vector<double>& Cxy, const 
 		}
 	}
 }
-
-
