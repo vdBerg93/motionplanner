@@ -7,6 +7,9 @@
 
 // Generate a linear reference paths
 MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir){
+	if(debug_mode){
+		cout<<"Generating reference..."<<endl;
+	}
 	MyReference ref;
 	double L = sqrt( pow(sample.x-node.ref.x.back(),2) + pow(sample.y-node.ref.y.back(),2) );
 	int N = round(L/ref_res)+1;

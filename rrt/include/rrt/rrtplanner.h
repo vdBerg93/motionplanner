@@ -34,7 +34,7 @@ struct MyReference{
 
 struct Node{        
     vector<double> state;   // Node state
-    int parentID;           // Parent ID
+    signed int parentID;           // Parent ID
     vector<int> children;   // Children id's
     MyReference ref;        // Reference to reach node
     float costE;            // Costfunction for exploration
@@ -78,7 +78,9 @@ class MyRRT{
         
         
 };
-double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, vector<double> carState);
+// double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, vector<double> carState);
+void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Node>& nodes, vector<double>& carState);
+
 geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds);
 geometry_msgs::Point sampleAroundVehicle(const vector<double> goalPose);
 geometry_msgs::Point sampleOnLane(const vector<double>& Cxy, vector<double> laneShifts, double Lmax);

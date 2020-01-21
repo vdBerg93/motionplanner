@@ -56,7 +56,7 @@ void Observer::callbackJoints(const sensor_msgs::JointState& msg){
     // Get the steer angle from joint_states topic
     // carState[3] = msg.position.back();  // Update steer angle
     carState[3] = msg.position[4]; // 4 = front right , 5 = front left
-    cout<<"Steer angle="<<carState[3]<<" rad"<<endl;
+//    cout<<"Steer angle="<<carState[3]<<" rad"<<endl;
 }
 
 void Observer::publishStates(){

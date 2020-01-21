@@ -10,66 +10,13 @@ bool MotionPlanner::updateObstacles(){
 
 // State callback message
 void MotionPlanner::updateState(car_msgs::State msg){
-	state.clear();
-	state.insert(state.begin(), msg.state.begin(), msg.state.end());
+	state.clear(); 	state.insert(state.begin(), msg.state.begin(), msg.state.end());
 	assert(state.size()==6);
 }
 
 
-bool MotionPlanner::resetPlanner(car_msgs::resetplanner::Request& req, car_msgs::resetplanner::Response& resp)
-{
-	motionplan.clear();
-	return true;
-}
-
-
-
-// Print a path to the terminal
-void showPath(const vector<Path>& path){
-	for(auto it = path.begin(); it!=path.end(); it++){
-		cout<<"Refx = [";
-		for(int i = 0; i!=it->ref.x.size(); i++){
-			cout<<it->ref.x[i]<<", ";
-		}
-		cout<<"]"<<endl;
-		cout<<"Refy = [";
-		for(int i = 0; i!=it->ref.y.size(); i++){
-			cout<<it->ref.y[i]<<", ";
-		}
-		cout<<"]"<<endl;
-		cout<<"Refv = [";
-		for(int i = 0; i!=it->ref.v.size(); i++){
-			cout<<it->ref.v[i]<<", ";
-		}
-		cout<<"]"<<endl;
-		cout<<"Trax = [";
-		for(int i = 0; i!=it->tra.size(); i++){
-			cout<<it->tra[i][0]<<", ";
-		}
-		cout<<"]"<<endl;
-		cout<<"Tray = [";
-		for(int i = 0; i!=it->tra.size(); i++){
-			cout<<it->tra[i][1]<<", ";
-		}
-		cout<<"]"<<endl;
-		cout<<"Trav = [";
-		for(int i = 0; i!=it->tra.size(); i++){
-			cout<<it->tra[i][4]<<", ";
-		}
-		cout<<"]"<<endl;
-	}
-}
-
-// Print a node to the terminal
-void showNode(const Node& node){
-	cout<<"--- Node output ---"<<endl;
-	cout<<"Refx = ["<<node.ref.x.front()<<", "<<node.ref.x.back()<<"]"<<endl;
-	cout<<"Refy = ["<<node.ref.y.front()<<", "<<node.ref.y.back()<<"]"<<endl;
-	cout<<"state= [";
-	for(auto it = node.state.begin(); it!=node.state.end(); ++it){
-		cout<<*it<<", ";
-	}
-	cout<<endl;
+bool MotionPlanner::resetPlanner(car_msgs::resetplanner::Request& req, car_msgs::resetplanner::Response& resp){
+	motionplan.clear(); 	return true;
 }
 
 // Motion planner callback
@@ -93,30 +40,31 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	}else{
 		ay_road_max = 0;
 	}
-	// ROS_INFO_STREAM("Doing coordinate transformations");
-	// Get the array of committed motion plans
-	transformPathWorldToCar(motionplan,worldState);
-	// If road parametrization is available, convert motion spec to straightened scenario
-	if(req.bend){
-		transformPathCarToRoad(motionplan,req.Cxy,req.Cxs, veh);
-		// Convert the obstacles
+
+	// Transform nodes to local coordinates
+	transformNodesWorldToCar(bestNodes,worldState);
+	if(req.bend){	
 		for(auto it = det.begin(); it!=det.end(); ++it){
+			// Convert the obstacles
 			transformPoseCarToRoad(it->obb.center.x,it->obb.center.y,it->obb.center.theta,req.Cxy,req.Cxs);
 			ROS_WARN_STREAM("TODO: Implement velocity bending");
 		}
-		// Convert the goal
+		transformNodesCarToRoad(bestNodes,worldState, req.Cxy, req.Cxs, veh);
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
-		// transformStateCarToRoad(carPose,req.Cxy,veh);
 	}
+	
 	// Initialize RRT planner
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	RRT.det = det; RRT.carState = carPose; 
-	// cout<<"Created tree object"<<endl;
 	ROS_INFO_STREAM("Initializing tree...");
-	double Tp = initializeTree(RRT, veh, motionplan, carPose);
-	ROS_INFO_STREAM("Committed path time= "<<Tp);
+	initializeTree(RRT,veh,bestNodes,carPose);
+	for(auto it = RRT.tree.begin(); it!=RRT.tree.end(); it++){
+		showNode(*it);
+	}
+	assert(RRT.tree.size()>0);	
 
 	// Build the tree
+	ROS_INFO_STREAM("Starting the tree build...");
 	Timer timer(200); int iter = 0;				
 	for(iter; timer.Get(); iter++){
 		expandTree(veh, RRT, pubPtr, det, req.Cxy); 
@@ -124,40 +72,27 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	ROS_INFO_STREAM("Expansion complete. Tree size is "<<RRT.tree.size()<<" after "<<iter<<" iterations");
 	ROS_INFO_STREAM("Fail counters | col: "<<fail_collision<<" iter: "<<fail_iterlimit<<" acc: "<<fail_acclimit<<" sim it: "<<sim_count);
 
-	// Select best path
-	bestNodes.clear();
-	bestNodes = extractBestPath(RRT.tree,pubPtr);
-	
-	// Stop when tree is empty
-	if(bestNodes.size()==0){		
-		if(req.bend){	transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);}
-		transformPathCarToWorld(motionplan,worldState);
-		ROS_ERROR_STREAM("No solution found. Returning without response.");
-		return;
-	}
-	// Select a part to commit here
-	vector<Path> commit, plan;
-	plan = convertNodesToPath(bestNodes);
-	plan.insert(plan.begin(), motionplan.begin(), motionplan.end());
-	
-	if((Tp<Tcommit)&&commit_path){
-		commit = getCommittedPath(bestNodes, Tp);
-		storeCommit(commit);
-		// showPath(commit);
-		ROS_INFO_STREAM("Total committed path time: "<<Tp<<" sec");
-	}else{
-		ROS_INFO_STREAM("No commitment required.");
-	}
-	if(req.bend){
-			transformPathRoadToCar(motionplan,req.Cxy,req.Cxs,veh);
-			transformPathRoadToCar(plan,req.Cxy,req.Cxs,veh);
-	}
-	transformPathCarToWorld(motionplan,worldState);
-	transformPathCarToWorld(plan,worldState);
 
-	// Publish committed part and add to motion plan
-	
-	publishPlan(plan); 
+	// Select best path 
+	bestNodes.clear();	bestNodes = extractBestPath(RRT.tree,pubPtr);
+	// Transform nodes to world coordinates
+	if(req.bend){	
+		transformNodesRoadToCar(bestNodes,worldState, req.Cxy, req.Cxs, veh);
+	}
+	transformNodesCarToworld(bestNodes,worldState);
+	// No solution found
+	if(bestNodes.size()==0){ 
+		ROS_ERROR_STREAM("No solution found. Returning without response."); return;
+	}
+	// Print best path to console
+	ROS_INFO_STREAM("Printing nodes of best path");
+	if(debug_mode){
+		for(auto it = bestNodes.begin(); it!= bestNodes.end(); it++){
+			showNode(*it);
+		}
+	}
+	vector<Path> plan = convertNodesToPath(bestNodes);
+	// publishPlan(plan); 
 	// Filtered message for MPC controller
 	car_msgs::Trajectory msg = generateMPCmessage(plan);
 	filterMPCmessage(msg);
@@ -165,8 +100,6 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		pubMPC->publish(msg);
 		publishPathToRviz(plan,pubPtr);	
 	}
-
-	// Log nodes
 
 	ROS_INFO_STREAM("Replied to request..."<<endl<<"-------------------------");
 }
@@ -371,10 +304,10 @@ vector<Path> convertNodesToPath(const vector<Node> &path){
 }
 
 // Publish the motion plan
-void MotionPlanner::publishPlan(const vector<Path>& plan){
-	car_msgs::MotionResponse resp = preparePathMessage(plan);
-	(*pubPlan).publish(resp);
-}
+// void MotionPlanner::publishPlan(const vector<Path>& plan){
+// 	car_msgs::MotionResponse resp = preparePathMessage(plan);
+// 	(*pubPlan).publish(resp);
+// }
 
 // Publish the best path
 void MotionPlanner::publishBestPath(const vector<Path>& path){
@@ -388,4 +321,53 @@ void MotionPlanner::storeCommit(const vector<Path>& commit){
 			motionplan.push_back(*it);
 		}
 	}
+}
+// Print a path to the terminal
+void showPath(const vector<Path>& path){
+	for(auto it = path.begin(); it!=path.end(); it++){
+		cout<<"Refx = [";
+		for(int i = 0; i!=it->ref.x.size(); i++){
+			cout<<it->ref.x[i]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Refy = [";
+		for(int i = 0; i!=it->ref.y.size(); i++){
+			cout<<it->ref.y[i]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Refv = [";
+		for(int i = 0; i!=it->ref.v.size(); i++){
+			cout<<it->ref.v[i]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Trax = [";
+		for(int i = 0; i!=it->tra.size(); i++){
+			cout<<it->tra[i][0]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Tray = [";
+		for(int i = 0; i!=it->tra.size(); i++){
+			cout<<it->tra[i][1]<<", ";
+		}
+		cout<<"]"<<endl;
+		cout<<"Trav = [";
+		for(int i = 0; i!=it->tra.size(); i++){
+			cout<<it->tra[i][4]<<", ";
+		}
+		cout<<"]"<<endl;
+	}
+}
+
+
+// Print a node to the terminal
+void showNode(const Node& node){
+	cout<<"--- Node output ---"<<endl;
+	cout<<"Parent= "<<node.parentID<<", Goal reached= "<<node.goalReached<<endl;
+	cout<<"Refx = ["<<node.ref.x.front()<<", "<<node.ref.x.back()<<"]"<<endl;
+	cout<<"Refy = ["<<node.ref.y.front()<<", "<<node.ref.y.back()<<"]"<<endl;
+	cout<<"state= [";
+	for(auto it = node.state.begin(); it!=node.state.end(); ++it){
+		cout<<*it<<", ";
+	}
+	cout<<endl;
 }

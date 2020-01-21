@@ -255,3 +255,52 @@ void transformPathCarToRoad(vector<Path>& path,const vector<double>& Cxy, const 
 		}
 	}
 }
+
+/* NODE TRANSFORMATIONS */
+void transformNodesRoadToCar(vector<Node>& nodes, const vector<double> carState, const vector<double>& Cxy, const vector<double> Cxs, const Vehicle& veh){
+	for(auto it = nodes.begin(); it!= nodes.end(); it++){
+			transformStateRoadToCar(it->state,Cxy, Cxs, veh);
+		for(int i = 0; i!= it->ref.x.size(); i++){
+			transformPointRoadToCar(it->ref.x[i], it->ref.y[i], Cxy, Cxs);
+			transformStateRoadToCar(it->tra[i],Cxy,Cxs,veh);
+		}
+	}
+}
+
+void transformNodesCarToRoad(vector<Node>& nodes, const vector<double> carState, const vector<double>& Cxy, const vector<double> Cxs, const Vehicle& veh){
+	for(auto it = nodes.begin(); it!= nodes.end(); it++){
+			transformStateCarToRoad(it->state,Cxy, Cxs, veh);
+		for(int i = 0; i!= it->ref.x.size(); i++){
+			transformPointCarToRoad(it->ref.x[i], it->ref.y[i], Cxy, Cxs);
+			transformStateCarToRoad(it->tra[i],Cxy,Cxs,veh);
+		}
+	}
+}
+
+void transformNodesCarToworld(vector<Node>& nodes, const vector<double> carState){
+	for(auto it = nodes.begin(); it!= nodes.end(); it++){
+		transformStateCarToWorld(it->state,carState);
+		// Loop through reference and transform
+		for(int i = 0; i!=it->ref.x.size(); i++){
+			transformPointCarToWorld(it->ref.x[i],it->ref.y[i],carState);
+		}
+		// Loop through trajectory and transform
+		for(int j = 0; j!=it->tra.size(); j++){
+			transformPointCarToWorld(it->tra[j][0], it->tra[j][1], carState);
+		}
+	}
+}
+
+void transformNodesWorldToCar(vector<Node>& nodes, const vector<double> carState){
+	for(auto it = nodes.begin(); it!= nodes.end(); it++){
+		transformStateWorldToCar(it->state,carState);
+		// Loop through reference and transform
+		for(int i = 0; i!=it->ref.x.size(); i++){
+			transformPointWorldToCar(it->ref.x[i],it->ref.y[i],carState);
+		}
+		// Loop through trajectory and transform
+		for(int j = 0; j!=it->tra.size(); j++){
+			transformPointWorldToCar(it->tra[j][0], it->tra[j][1], carState);
+		}
+	}
+}

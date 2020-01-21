@@ -1,0 +1,393 @@
+<sdf version='1.6'>
+  <world name='default'>
+        <model name='person_walking'>
+      <link name='ped_link_1'>
+        <gravity>0</gravity>
+        <collision name='bottom'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.35 0.75 0.02</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+            <torsional>
+              <ode/>
+            </torsional>
+            <ode/>
+          </friction>
+          </surface>
+        </collision>
+        <collision name='person'>
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://person_walking/meshes/walking.dae</uri>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='visual'>
+          <pose frame=''>0 0 0 0 -0 0</pose>
+            <geometry>
+              <mesh>
+                <uri>model://person_walking/meshes/walking.dae</uri>
+              </mesh>
+            </geometry>
+        </visual>
+        <self_collide>0</self_collide>
+      </link>
+        <plugin name="object_controller" filename="libgazebo_ros_planar_move.so">
+          <commandTopic>ped_link_1</commandTopic>
+          <ini_x>10</ini_x>
+          <ini_y>0</ini_y>
+          <odometryTopic>map</odometryTopic>
+          <odometryFrame>map</odometryFrame>
+          <odometryRate>10.0</odometryRate>
+          <robotBaseFrame>ped_link_1</robotBaseFrame>
+        </plugin>
+    </model>
+<!-- -->
+        <model name='person_walking_2'>
+          <link name='ped_link_2'>
+          <gravity>0</gravity>
+          <collision name='bottom'>
+            <pose >0 0 0 0 0 0</pose>
+            <geometry>
+              <box>
+                <size>0.35 0.75 0.02</size>
+              </box>
+            </geometry>
+          <max_contacts>10</max_contacts>
+            <surface>
+              <contact>
+                <ode/>
+              </contact>
+            <bounce/>
+             <friction>
+               <torsional>
+                 <ode/>
+               </torsional>
+               <ode/>
+             </friction>
+            </surface>
+          </collision>
+      <collision name='person'>
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://person_walking/meshes/walking.dae</uri>
+          </mesh>
+        </geometry>
+        <max_contacts>10</max_contacts>
+        <surface>
+          <contact>
+            <ode/>
+          </contact>
+          <bounce/>
+          <friction>
+            <torsional>
+              <ode/>
+            </torsional>
+            <ode/>
+          </friction>
+        </surface>
+      </collision>
+          <visual name='visual'>
+            <pose>0 0 0 0 -0 0</pose>
+                 <geometry>
+                   <mesh>
+                     <uri>model://person_walking/meshes/walking.dae</uri>
+                   </mesh>
+                 </geometry>
+               </visual>
+               <self_collide>0</self_collide>
+               <enable_wind>0</enable_wind>
+               <kinematic>0</kinematic>
+            </link>
+            <plugin name="object_controller_2" filename="libgazebo_ros_planar_move.so">
+              <commandTopic>ped_link_2</commandTopic>
+              <ini_x>20</ini_x>
+              <ini_y>0</ini_y>
+              <odometryTopic>map</odometryTopic>
+              <odometryFrame>map</odometryFrame>
+              <odometryRate>10.0</odometryRate>
+              <robotBaseFrame>ped_link_2</robotBaseFrame>
+            </plugin>
+        </model>
+    <!-- END OF PERSONS -->
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose frame=''>0 0 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>5000 5000</size>
+            </plane>
+          </geometry>
+          <surface>
+            <contact>
+              <collide_bitmask>65535</collide_bitmask>
+              <ode/>
+            </contact>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <visual name='visual'>
+          <pose frame=''>0 0 -0.1 0 -0 0</pose>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>5000 5000</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grass</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>
+    <road name='Road'>
+      <width>8</width>
+<point> 0 0 0 </point>
+<point> 2.499 0.062487 0 </point>
+<point> 4.9917 0.24979 0 </point>
+<point> 7.4719 0.56145 0 </point>
+<point> 9.9335 0.99667 0 </point>
+<point> 12.3702 1.5544 0 </point>
+<point> 14.776 2.2332 0 </point>
+<point> 17.1449 3.0314 0 </point>
+<point> 19.4709 3.947 0 </point>
+<point> 21.7483 4.9776 0 </point>
+<point> 23.9713 6.1209 0 </point>
+<point> 26.1344 7.3738 0 </point>
+<point> 28.2321 8.7332 0 </point>
+<point> 30.2593 10.1958 0 </point>
+<point> 32.2109 11.7579 0 </point>
+<point> 34.0819 13.4156 0 </point>
+<point> 35.8678 15.1647 0 </point>
+<point> 37.564 17.0008 0 </point>
+<point> 39.1663 18.9195 0 </point>
+<point> 40.6708 20.9158 0 </point>
+<point> 42.0735 22.9849 0 </point>
+<point> 43.3712 25.1214 0 </point>
+<point> 44.5604 27.3202 0 </point>
+<point> 45.6382 29.5756 0 </point>
+<point> 46.602 31.8821 0 </point>
+<point> 47.4492 34.2339 0 </point>
+<point> 48.1779 36.6251 0 </point>
+<point> 48.7862 39.0497 0 </point>
+<point> 49.2725 41.5016 0 </point>
+<point> 49.6356 43.9749 0 </point>
+<point> 49.8747 46.4631 0 </point>
+<point> 49.9892 48.9603 0 </point>
+<point> 49.9787 51.46 0 </point>
+<point> 49.8433 53.956 0 </point>
+<point> 49.5832 56.4422 0 </point>
+<point> 49.1993 58.9123 0 </point>
+<point> 48.6924 61.3601 0 </point>
+<point> 48.0638 63.7795 0 </point>
+<point> 47.315 66.1645 0 </point>
+<point> 46.448 68.509 0 </point>
+<point> 45.4649 70.8073 0 </point>
+<point> 44.3681 73.0536 0 </point>
+<point> 43.1605 75.2423 0 </point>
+<point> 41.8449 77.3679 0 </point>
+<point> 40.4248 79.4251 0 </point>
+<point> 38.9037 81.4087 0 </point>
+<point> 37.2853 83.3138 0 </point>
+<point> 35.5737 85.1357 0 </point>
+<point> 33.7732 86.8697 0 </point>
+<point> 31.8882 88.5116 0 </point>
+<point> 29.9236 90.0572 0 </point>
+<point> 27.8842 91.5027 0 </point>
+<point> 25.7751 92.8444 0 </point>
+<point> 23.6015 94.0791 0 </point>
+<point> 21.369 95.2036 0 </point>
+<point> 19.083 96.2151 0 </point>
+<point> 16.7494 97.1111 0 </point>
+<point> 14.3739 97.8894 0 </point>
+<point> 11.9625 98.5479 0 </point>
+<point> 9.5211 99.0851 0 </point>
+<point> 7.056 99.4996 0 </point>
+<point> 4.5732 99.7904 0 </point>
+<point> 2.079 99.9568 0 </point>
+<point> -0.42036 99.9982 0 </point>
+<point> -2.9187 99.9147 0 </point>
+<point> -5.4098 99.7065 0 </point>
+<point> -7.8873 99.374 0 </point>
+<point> -10.3451 98.9181 0 </point>
+<point> -12.7771 98.3399 0 </point>
+<point> -15.1771 97.6409 0 </point>
+<point> -17.5392 96.8228 0 </point>
+<point> -19.8574 95.8877 0 </point>
+<point> -22.126 94.8379 0 </point>
+<point> -24.3393 93.676 0 </point>
+<point> -26.4918 92.405 0 </point>
+<point> -28.5781 91.028 0 </point>
+<point> -30.5929 89.5484 0 </point>
+<point> -32.5313 87.97 0 </point>
+<point> -34.3883 86.2966 0 </point>
+<point> -36.1594 84.5326 0 </point>
+<point> -37.8401 82.6822 0 </point>
+<point> -39.4263 80.7501 0 </point>
+<point> -40.9139 78.7412 0 </point>
+<point> -42.2992 76.6604 0 </point>
+<point> -43.5788 74.513 0 </point>
+<point> -44.7495 72.3044 0 </point>
+<point> -45.8083 70.04 0 </point>
+<point> -46.7526 67.7255 0 </point>
+<point> -47.5801 65.3666 0 </point>
+<point> -48.2887 62.9694 0 </point>
+<point> -48.8765 60.5398 0 </point>
+<point> -49.3422 58.0838 0 </point>
+<point> -49.6846 55.6076 0 </point>
+<point> -49.9027 53.1174 0 </point>
+<point> -49.9962 50.6194 0 </point>
+<point> -49.9646 48.1199 0 </point>
+<point> -49.8082 45.6251 0 </point>
+<point> -49.5273 43.1411 0 </point>
+<point> -49.1226 40.6744 0 </point>
+<point> -48.5952 38.2309 0 </point>
+<point> -47.9462 35.8169 0 </point>
+<point> -47.1774 33.4383 0 </point>
+<point> -46.2907 31.1011 0 </point>
+<point> -45.2883 28.8112 0 </point>
+<point> -44.1727 26.5742 0 </point>
+<point> -42.9467 24.3957 0 </point>
+<point> -41.6134 22.2813 0 </point>
+<point> -40.176 20.2361 0 </point>
+<point> -38.6382 18.2654 0 </point>
+<point> -37.0039 16.3739 0 </point>
+<point> -35.277 14.5665 0 </point>
+<point> -33.462 12.8477 0 </point>
+<point> -31.5633 11.2217 0 </point>
+<point> -29.5858 9.6927 0 </point>
+<point> -27.5343 8.2644 0 </point>
+<point> -25.414 6.9404 0 </point>
+<point> -23.2301 5.724 0 </point>
+<point> -20.9882 4.6183 0 </point>
+<point> -18.6938 3.6261 0 </point>
+<point> -16.3527 2.7497 0 </point>
+<point> -13.9708 1.9915 0 </point>
+<point> -11.5539 1.3532 0 </point>
+<point> -9.1081 0.83658 0 </point>
+<point> -6.6396 0.4428 0 </point>
+<point> -4.1545 0.1729 0 </point>
+<point> -1.659 0.027529 0 </point>
+<point> 0 0 0 </point>
+<point> 2.499 0.062487 0 </point>
+      <material>
+        <script>
+          <uri>file://media/materials/scripts/gazebo.material</uri>
+          <name>Gazebo/Residential</name>
+        </script>
+      </material>
+    </road>
+	<!--
+    <road name='Sidewalk'>
+      <width>1</width>
+      <point>-100.5 -4.5 0</point>
+      <point>100 -4.5 0</point>
+      <point>100 4.5 0</point>
+      <point>-100.5 4.5 0</point>
+      <point>-100.5 -5 0</point>
+      <material>
+        <script>
+          <uri>file://media/materials/scripts/gazebo.material</uri>
+          <name>Gazebo/Footway</name>
+        </script>
+      </material>
+    </road>
+	-->
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type='adiabatic'/>
+    <physics name='default_physics' default='0' type='ode'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>1</shadows>
+      <sky>
+        <clouds>
+          <speed>12</speed>
+        </clouds>
+      </sky>
+    </scene>
+    <wind/>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+    <state world_name='default'>
+      <sim_time>884 609000000</sim_time>
+      <real_time>61 885130729</real_time>
+      <wall_time>1578595662 485425778</wall_time>
+      <iterations>61563</iterations>
+      <model name='Lamp Post'>
+        <pose frame=''>1.99282 4.9148 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>1.99282 4.9148 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <light name='sun'>
+        <pose frame=''>0 0 10 0 -0 0</pose>
+      </light>
+    </state>
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose frame=''>-21.3558 -20.6075 276.673 0 1.5698 0.008171</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+  </world>
+</sdf>
