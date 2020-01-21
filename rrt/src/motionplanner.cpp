@@ -23,19 +23,23 @@ bool MotionPlanner::resetPlanner(car_msgs::resetplanner::Request& req, car_msgs:
 void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	fail_acclimit=0; fail_collision=0; fail_iterlimit=0; sim_count = 0;
 	ROS_INFO_STREAM("---------"<<endl<<"Received request, processing...");
+	if(debug_mode){cout<<"Goal =["<<req.goal[0]<<", "<<req.goal[1]<<", "<<req.goal[2]<<", "<<req.goal[3]<<"]"<<endl;}
 	// Update variables
 	Vehicle veh; veh.setPrius();	
 	vector<double> worldState = state;
 	vector<double> carPose = transformStateToLocal(worldState);
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
+
 	// debug fixing of ref_res =nan
 	assert(!isnan(carPose[0])); assert(!isnan(carPose[1])); assert(!isnan(carPose[2])); assert(!isnan(carPose[3])); assert(!isnan(carPose[4]));
 	assert(!isnan(ref_res)); 
+
 	vmax = req.vmax; vgoal = req.goal[3];
 	updateObstacles();
 	ROS_INFO_STREAM("Considering "<<det.size()<<" obstacles.");
 	// Determine an upperbound of the lateral acceleration introduced by bending the path
 	if (req.Cxy.size()>0){
+		if(debug_mode){cout<<"Cxy=["<<req.Cxy[0]<<", "<<req.Cxy[1]<<", "<<req.Cxy[2]<<endl;}
 		ay_road_max = abs(pow(worldState[4],2)*(2*req.Cxy[0]));
 	}else{
 		ay_road_max = 0;
@@ -47,7 +51,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		for(auto it = det.begin(); it!=det.end(); ++it){
 			// Convert the obstacles
 			transformPoseCarToRoad(it->obb.center.x,it->obb.center.y,it->obb.center.theta,req.Cxy,req.Cxs);
-			ROS_WARN_STREAM("TODO: Implement velocity bending");
+			ROS_WARN_STREAM("TODO: Implement obstacle velocity bending");
 		}
 		transformNodesCarToRoad(bestNodes,worldState, req.Cxy, req.Cxs, veh);
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
@@ -57,6 +61,8 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	RRT.det = det; RRT.carState = carPose; 
 	ROS_INFO_STREAM("Initializing tree...");
+	bestNodes.clear();
+
 	initializeTree(RRT,veh,bestNodes,carPose);
 	for(auto it = RRT.tree.begin(); it!=RRT.tree.end(); it++){
 		showNode(*it);
@@ -77,8 +83,10 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	bestNodes.clear();	bestNodes = extractBestPath(RRT.tree,pubPtr);
 	// Transform nodes to world coordinates
 	if(req.bend){	
+		if(debug_mode){ cout<<"bending nodes..."<<endl;}
 		transformNodesRoadToCar(bestNodes,worldState, req.Cxy, req.Cxs, veh);
 	}
+	if(debug_mode){ cout<<"transforming nodes to global..."<<endl;}
 	transformNodesCarToworld(bestNodes,worldState);
 	// No solution found
 	if(bestNodes.size()==0){ 

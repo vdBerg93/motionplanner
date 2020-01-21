@@ -17,7 +17,7 @@ using namespace std;
 #include "car_msgs/MotionResponse.h"
 #include "car_msgs/resetplanner.h"
 #include "car_msgs/LaneDet.h"
-
+#include "PolynomialRegression.h"
 //reset msgs
 #include <std_srvs/Empty.h>
 #include <robot_localization/SetPose.h>
@@ -25,6 +25,7 @@ using namespace std;
 const vector<double>& initialGoal {50,0,0,0};
 int simCount = 0;
 
+#include "functions.h"
 #include "functions.cpp"
 bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose);
 
@@ -60,19 +61,19 @@ int main( int argc, char** argv ){
         if (msgManager.goalReceived){
             msgManager.sendMotionRequest();
 
-            if (goalReachedCheck(msgManager.goalW,msgManager.carPose)){
-                ROS_WARN_STREAM("Goal reached! Resetting simulation...");
+            // if (goalReachedCheck(msgManager.goalW,msgManager.carPose)){
+            //     ROS_WARN_STREAM("Goal reached! Resetting simulation...");
                 
-                std_srvs::Empty reset_msg_;
-                robot_localization::SetPose reset_pose_msg_;
-                car_msgs::resetplanner reset_planner_msg_;
+            //     std_srvs::Empty reset_msg_;
+            //     robot_localization::SetPose reset_pose_msg_;
+            //     car_msgs::resetplanner reset_planner_msg_;
 
-                reset_simulation_client_.call(reset_msg_);
-                reset_ekf_client_.call(reset_pose_msg_);
-                reset_planner_client_.call(reset_planner_msg_);
-                simCount++;
-                ROS_ERROR_STREAM("Simulation count= "<<simCount);
-            }
+            //     reset_simulation_client_.call(reset_msg_);
+            //     reset_ekf_client_.call(reset_pose_msg_);
+            //     reset_planner_client_.call(reset_planner_msg_);
+            //     simCount++;
+            //     ROS_ERROR_STREAM("Simulation count= "<<simCount);
+            // }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }

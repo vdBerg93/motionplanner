@@ -31,7 +31,7 @@
   <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 odom base_link"/>
 
   <!-- Launch Pedsim world -->
-  <include file="$(find pedsim_simulator)/launch/twoped_crossing.launch">  </include>
+  <!-- <include file="$(find pedsim_simulator)/launch/twoped_crossing.launch">  </include> -->
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 0 -y 0 -z 0 -model prius"/>
 

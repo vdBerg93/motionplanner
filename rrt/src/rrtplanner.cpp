@@ -121,63 +121,6 @@ double getNodeCost(const MyRRT& RRT, const Vehicle& veh, const double& parentCos
 }
 
 
-
-// double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
-// 	ROS_DEBUG_STREAM("In initialization function");
-// 	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
-// 	double Tp = 0;
-// 	assert(carState.size()>=6);
-// 	// If committed path is empty, initialize tree with reference at (Dla,0)
-// 	if (path.size()==0){
-// 		ROS_INFO_STREAM("No committed path. Adding initial node at preview point...");
-// 		assert(carState.size()>=6);
-// 		RRT.addInitialNode(carState);
-// 		ROS_INFO_STREAM("Initialized empty tree.");
-// 		return Tp;
-// 	}
-
-// 	// See which parts of path have been passed and erase these from the pathlist
-// 	// 1. Loop through the segments
-// 	// 2. erase everything behind the car
-// 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
-// 	for(auto it = path.begin(); it!=path.end(); ++it){
-// 		if ((it->tra.back()[0])<0){
-// 			path.erase(it--);
-// 			cout<<"Removed part of plan."<<endl;
-// 		}else{
-// 			for(auto it2 = it->tra.begin(); it2!=it->tra.end(); ++it2){
-// 				if (((*it2)[0])<0){
-// 					it->tra.erase(it2--);
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	// If this assertion fails, the path committment is not configured properly
-// 	if(path.size()==0){
-// 		ROS_ERROR_STREAM("All nodes were erased. Committed time not configured properly!");
-// 		RRT.addInitialNode(carState);
-// 		return 0;
-// 		// assert(path.size()!=0);
-// 	}
-
-// 	// Calculate total committed time
-// 	for(auto it = path.begin(); it!=path.end(); ++it){
-// 		for(int j = 1; j<it->tra.size(); j++){
-// 			Tp += sim_dt;
-// 		}
-// 	}
-
-// 	// Initialize tree
-// 	Node node(path.back().tra.back(), -1, path.back().ref, path.back().tra,0,0,0);
-// 	// node.state[6] = Tp;
-// 	node.state[6] = 0;
-// 	RRT.tree.push_back(node);
-// 	ROS_WARN_STREAM("Initialized tree. Tp = "<<Tp);
-
-// 	return Tp;
-// }
-
 // Perform a tree expansion
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const vector<double>& Cxy){;
 	if(debug_mode){
@@ -187,11 +130,10 @@ void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<c
 	// #### RANDOM SAMPLING: ####
 	geometry_msgs::Point sample;
 	if (RRT.bend){ 	// Sample on lane
-		double Lmax = RRT.goalPose[0];
-		sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
+		// double Lmax = RRT.goalPose[0];
+		// sample = sampleOnLane(Cxy,RRT.laneShifts, Lmax);
+		sample = sampleAroundVehicle(RRT.goalPose);
 	}else{ 			// Sample around vehicle
-		// vector<double> bounds = {0,RRT.goalPose[0]+5,RRT.goalPose[1]-5, RRT.goalPose[1]+5};
-		// sample = sampleAroundVehicle(bounds);
 		sample = sampleAroundVehicle(RRT.goalPose);
 	}
 	signed int dir = 1; // Driving direction variable
@@ -417,9 +359,9 @@ vector<Node> extractBestPath(vector<Node> tree, ros::Publisher* ptrPub){
 		signed int parent = bestPath.front().parentID;
 		ROS_WARN_STREAM("Best path cost = "<<tree[parent].costS);
 		while (parent!=-1){
-			ROS_INFO_STREAM("parent = "<<parent);
+			// ROS_INFO_STREAM("parent = "<<parent);
 			bestPath.insert(bestPath.begin(), tree[parent]);
-			ROS_INFO_STREAM("DB2");
+			// ROS_INFO_STREAM("DB2");
 			parent = bestPath.front().parentID;
 		}
 	}
@@ -427,7 +369,9 @@ vector<Node> extractBestPath(vector<Node> tree, ros::Publisher* ptrPub){
 	// for(int i = 0; i!= bestPath.size(); i++){
 	// 	bestPath[i].parentID = i-1;
 	// }
-
+	if(debug_mode){
+		cout<<"Returned best path!"<<endl;
+	}
 	return bestPath;
 }
 
@@ -516,3 +460,61 @@ visualization_msgs::Marker createEmptyMsg(){
     msg.type = visualization_msgs::Marker::POINTS;
     return msg;    
 }
+
+
+
+// double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Path>& path, vector<double> carState){
+// 	ROS_DEBUG_STREAM("In initialization function");
+// 	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
+// 	double Tp = 0;
+// 	assert(carState.size()>=6);
+// 	// If committed path is empty, initialize tree with reference at (Dla,0)
+// 	if (path.size()==0){
+// 		ROS_INFO_STREAM("No committed path. Adding initial node at preview point...");
+// 		assert(carState.size()>=6);
+// 		RRT.addInitialNode(carState);
+// 		ROS_INFO_STREAM("Initialized empty tree.");
+// 		return Tp;
+// 	}
+
+// 	// See which parts of path have been passed and erase these from the pathlist
+// 	// 1. Loop through the segments
+// 	// 2. erase everything behind the car
+// 	geometry_msgs::Point Ppreview; Ppreview.x = ctrl_dla; Ppreview.y = 0; Ppreview.z=0;
+// 	for(auto it = path.begin(); it!=path.end(); ++it){
+// 		if ((it->tra.back()[0])<0){
+// 			path.erase(it--);
+// 			cout<<"Removed part of plan."<<endl;
+// 		}else{
+// 			for(auto it2 = it->tra.begin(); it2!=it->tra.end(); ++it2){
+// 				if (((*it2)[0])<0){
+// 					it->tra.erase(it2--);
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// If this assertion fails, the path committment is not configured properly
+// 	if(path.size()==0){
+// 		ROS_ERROR_STREAM("All nodes were erased. Committed time not configured properly!");
+// 		RRT.addInitialNode(carState);
+// 		return 0;
+// 		// assert(path.size()!=0);
+// 	}
+
+// 	// Calculate total committed time
+// 	for(auto it = path.begin(); it!=path.end(); ++it){
+// 		for(int j = 1; j<it->tra.size(); j++){
+// 			Tp += sim_dt;
+// 		}
+// 	}
+
+// 	// Initialize tree
+// 	Node node(path.back().tra.back(), -1, path.back().ref, path.back().tra,0,0,0);
+// 	// node.state[6] = Tp;
+// 	node.state[6] = 0;
+// 	RRT.tree.push_back(node);
+// 	ROS_WARN_STREAM("Initialized tree. Tp = "<<Tp);
+
+// 	return Tp;
+// }

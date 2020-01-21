@@ -39,7 +39,7 @@ bool Observer::callbackService(car_msgs::getobstacles::Request &req, car_msgs::g
 }
 
 void Observer::callbackLane(const car_msgs::LaneDet& msg){
-	laneCxy = msg.coef;
+	laneCxy = msg.Cxy;
 	return;
 }
 

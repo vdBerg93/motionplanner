@@ -1,13 +1,31 @@
 <?xml version="1.0"?>
 <launch>
-	<include file="$(find rrt)/launch/parameters.launch" />
-	<!-- Start the obstacle detection node -->
-	<!--node
-		pkg="pcl_converter"
-		type="pcl_converter_node"
-		name="pcl_converter_node"
+	<!-- Load parameters-->
+	<include 
+		file="$(find rrt)/launch/parameters.launch" 
+	/>
+	<!-- State estimator node -->
+	<node
+		pkg="state_estimator"
+		type="state_estimator_node"
+		name="state_estimator_node"
 		respawn="true"
-	-->
+	/>
+	<!-- Lane detection -->
+	<node
+		pkg="road_perception_simulator"
+		type="road_perception_simulator_node"
+		name="road_perception_simulator_node"
+		respawn="true"
+	/>
+	<!-- Obstacle tracker-->
+	<node
+		pkg="obstacle_tracker"
+		type="obstacle_tracker_node"
+		name="obstacle_tracker_node"
+		output="log"
+		respawn="true"
+	/>
 	<!-- Start the RRT planner node -->
 	<node
 		pkg="rrt"
@@ -23,22 +41,7 @@
 		name="mission_planner_node"
 		output="log"
 		required="true"
-	/>
-	<!-- State estimator node -->
-	<node
-		pkg="state_estimator"
-		type="state_estimator_node"
-		name="state_estimator_node"
-		respawn="true"
-	/>
-	<!-- Obstacle tracker-->
-	<node
-		pkg="obstacle_tracker"
-		type="obstacle_tracker_node"
-		name="obstacle_tracker_node"
-		output="log"
-		respawn="true"
-	/>
+	/>	
 	<!-- Rqt reconfigure -->
 	<node
 		pkg="rqt_reconfigure"
@@ -46,11 +49,4 @@
 		name="rqt_reconfigure"
 		respawn="true"
 	/>
-	<!-- Start the simulation
-	<include file="$(find car_simulation)/launch/simulation.launch">
-		<arg name="gazebo_gui" value="false" />
-		<arg name="world_name" value="myworldobs.world" />
-		<arg name="rviz" value="true" />
-	</include>
-	 -->
 </launch>

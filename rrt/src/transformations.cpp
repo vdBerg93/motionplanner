@@ -259,21 +259,30 @@ void transformPathCarToRoad(vector<Path>& path,const vector<double>& Cxy, const 
 /* NODE TRANSFORMATIONS */
 void transformNodesRoadToCar(vector<Node>& nodes, const vector<double> carState, const vector<double>& Cxy, const vector<double> Cxs, const Vehicle& veh){
 	for(auto it = nodes.begin(); it!= nodes.end(); it++){
-			transformStateRoadToCar(it->state,Cxy, Cxs, veh);
+		// if(debug_mode){cout<<"Transforming node state..."<<endl;}
+		transformStateRoadToCar(it->state,Cxy, Cxs, veh);
 		for(int i = 0; i!= it->ref.x.size(); i++){
+			// if(debug_mode){cout<<"Transforming reference point "<<i<<"/"<<(it->ref.x.size()-1)<<endl;}
 			transformPointRoadToCar(it->ref.x[i], it->ref.y[i], Cxy, Cxs);
-			transformStateRoadToCar(it->tra[i],Cxy,Cxs,veh);
+		}
+		for(int j = 0; j!=it->tra.size(); j++){
+			// if(debug_mode){cout<<"Transforming trajectory point "<<j<<"/"<<(it->tra.size()-1)<<endl;}
+			transformStateRoadToCar(it->tra[j],Cxy,Cxs,veh);
 		}
 	}
 }
 
-void transformNodesCarToRoad(vector<Node>& nodes, const vector<double> carState, const vector<double>& Cxy, const vector<double> Cxs, const Vehicle& veh){
+void transformNodesCarToRoad(vector<Node>& nodes, const vector<double> carState, const vector<double>& Cxy, const vector<double>& Cxs, const Vehicle& veh){
 	for(auto it = nodes.begin(); it!= nodes.end(); it++){
 			transformStateCarToRoad(it->state,Cxy, Cxs, veh);
 		for(int i = 0; i!= it->ref.x.size(); i++){
 			transformPointCarToRoad(it->ref.x[i], it->ref.y[i], Cxy, Cxs);
-			transformStateCarToRoad(it->tra[i],Cxy,Cxs,veh);
 		}
+		for(int j = 0; j!=it->tra.size(); j++){
+			// if(debug_mode){cout<<"Transforming trajectory point "<<j<<"/"<<(it->tra.size()-1)<<endl;}
+			transformStateCarToRoad(it->tra[j],Cxy,Cxs,veh);
+		}
+					
 	}
 }
 

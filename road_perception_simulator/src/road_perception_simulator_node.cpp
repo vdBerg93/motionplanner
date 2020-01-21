@@ -52,22 +52,47 @@ struct RoadClass{
         theta_close = asin(x_close/Radius);
     }
     vector<double> getCoefficients(const vector<double> carState){
-    int N = round(M_PI_4/resolution);
-    vector<double> angles = LinearSpacedVector(theta_close, theta_close+M_PI_4, N);
-    vector<double> X, Y;
-    // Generate road centerline in road coordinates
-    for(auto it = angles.begin(); it!= angles.end(); it++){
-        X.push_back(Radius*sin(*it)); Y.push_back(Radius*(1-cos(*it)));
-        transformPointWorldToCar(X.back(), Y.back(),carState);
+        int N = round(M_PI_4/resolution);
+        vector<double> angles = LinearSpacedVector(theta_close, theta_close+M_PI_4, N);
+        vector<double> X, Y;
+        // Generate road centerline in road coordinates
+        for(auto it = angles.begin(); it!= angles.end(); it++){
+            X.push_back(Radius*sin(*it)); Y.push_back(Radius*(1-cos(*it)));
+            transformPointWorldToCar(X.back(), Y.back(),carState);
+        }
+        // Fit 2nd order polynomial
+        vector<double> laneCxy, laneCxs;
+        PolynomialRegression <double> Poly;
+        Poly.fitIt(X,Y,2,laneCxy);
+        return laneCxy;
     }
-    // Fit 2nd order polynomial
-    vector<double> coefficients;
-    PolynomialRegression <double> Poly;
-    Poly.fitIt(X,Y,2,coefficients);
-    return coefficients;
-}
 };
 
+void generateArclengthParametrization(const vector<double>& Cxy, vector<double>& Cxs){
+    const double res = 0.01;
+    const double x_end = 50;
+    const int N = round(x_end/res);
+    vector<double> x = LinearSpacedVector(0,x_end,N);
+    vector<double> y;
+    // Calculate y coordinates
+    for(auto it = x.begin(); it!=x.end(); it++){
+        y.push_back( Cxy[0]*pow((*it),2) + Cxy[1]*(*it) + Cxy[2] );
+    }
+    // Calculate arclength
+    vector<double> L = {0};
+    for(int i = 1; i!=x.size(); i++){
+        L.push_back(L.back() + sqrt( pow(x[i]-x[i-1],2) + pow(y[i] - y[i-1],2) ) );
+    }
+    assert( (L.end()<=100) && "Wrong arclength parametrization");
+    // Fit polynomial
+    PolynomialRegression <double> Poly;
+    Cxs.clear();
+    Poly.fitIt(x,L,2,Cxs);
+
+    assert( (x.size()==y.size()) && "Wrong dimensions of arclength param vectors!");
+    assert( (x.size()==L.size()) && "Wrong dimensions in arclength param vectors!");
+    ROS_INFO_STREAM("Updated arc-length parametrization.");
+}
 
 
 class MsgManager{
@@ -77,14 +102,21 @@ class MsgManager{
     void stateCallback(const car_msgs::State& input){
         vector<double> carState = input.state;
         ptrRoad->updateClosestPoint( carState);
-        // cout<<"Pclose="<<ptrRoad->x_close<<", "<<ptrRoad->y_close<<", "<<ptrRoad->theta_close<<endl;
-        vector<double> coefficients = ptrRoad->getCoefficients(carState);
-        ROS_INFO_STREAM("Got center coefficients: ["<<coefficients[0]<<", "<<coefficients[1]<<", "<<coefficients[2]<<"]");
+        // Get coefficients of path and reverse vector
+        vector<double> laneCxy = ptrRoad->getCoefficients(carState);
+        std::reverse(laneCxy.begin(), laneCxy.end());
+        // Generate arc-length parametrization
+        vector<double> laneCxs;
+        generateArclengthParametrization(laneCxy, laneCxs);
+        std::reverse(laneCxs.begin(), laneCxs.end());
+        ROS_INFO_STREAM("Got center coefficients: ["<<laneCxy[0]<<", "<<laneCxy[1]<<", "<<laneCxy[2]<<"]");
+        // Prepare output message
         car_msgs::LaneDet output;
-        output.coef = coefficients;
+        output.Cxy = laneCxy;
+        output.Cxs = laneCxs;
         ptrPub->publish(output);
         // Rviz publising
-        visualization_msgs::MarkerArray msgRviz = generateMessage(coefficients);
+        visualization_msgs::MarkerArray msgRviz = generateMessage(laneCxy);
         ptrRviz->publish(msgRviz);
     }
     private:
@@ -162,7 +194,7 @@ visualization_msgs::MarkerArray generateMessage(const vector<double>& coef){
     geometry_msgs::Point p;
     for(auto it = x.begin(); it!=x.end(); it++){
         p.x = *it;
-        p.y = coef[0] + coef[1]*(*it) + coef[2]*pow((*it),2);
+        p.y = coef[0]*pow((*it),2) + coef[1]*(*it) + coef[2];
         p.z = 0;
         msg.points.push_back(p);
     }
