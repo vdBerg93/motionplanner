@@ -18,6 +18,7 @@ struct MsgManager{
     MsgManager(): confirmed(0), goalReceived(0){
         initializeGoal();
         carPose.push_back(0); carPose.push_back(0); carPose.push_back(0); carPose.push_back(0); 
+        laneCoef.push_back(0); laneCoef.push_back(0); laneCoef.push_back(0);
     }
     vector<double> carPose;
     double Vgoal, Vmax;
@@ -26,10 +27,18 @@ struct MsgManager{
     ros::Publisher* ptrPubMP;
     void stateCallback(const car_msgs::State& input);
     void goalCallback(geometry_msgs::PoseStamped input);
+    void laneCallback(const car_msgs::LaneDet& input);
+    vector<double> laneCoef;
     // void motionCallback(car_msgs::MotionResponse resp);
     void sendMotionRequest();
     void updateGoalCar();
 };
+
+void MsgManager::laneCallback(const car_msgs::LaneDet& input){
+    laneCoef.clear();
+    laneCoef = input.coef;
+    ROS_INFO_STREAM("Updated lane coefficients");
+}
 
 void MsgManager::stateCallback(const car_msgs::State& input){
     // vector<double> state = {input.pose.pose.position.x,input.pose.pose.position.y,convertQuaternionToEuler(input.pose.pose.orientation)};
@@ -63,15 +72,24 @@ void MsgManager::updateGoalCar(){
 
 void MsgManager::sendMotionRequest(){
     car_msgs::MotionRequest req;
-    updateGoalCar();
+    // updateGoalCar();
     
+    double x_goal = 30;
+    double y_goal = laneCoef[0] + laneCoef[1]*x_goal + laneCoef[2]*pow(x_goal,2);
+    double dydx = 2*laneCoef[2]*x_goal + laneCoef[1];
+    double h_goal = atan2(dydx,1);
+
+    vector<double> goalC = {x_goal, y_goal, h_goal, 0};
+
     for(auto it = goalC.begin(); it!=goalC.end(); it++){
         req.goal.push_back(*it);
     }
+
     req.vmax = Vmax;
     req.bend = false;
+    // req.Cxy
     // cout<<"Goal (map): "<<"["<<goalW[0]<<", "<<goalW[1]<<", "<<goalW[2]<<", "<<goalW[3]<<"]"<<endl;
-    ROS_DEBUG_STREAM("Goal (car): "<<"["<<goalC[0]<<", "<<goalC[1]<<", "<<goalC[2]<<", "<<goalC[3]<<"]");
+    // ROS_DEBUG_STREAM("Goal (car): "<<"["<<goalC[0]<<", "<<goalC[1]<<", "<<goalC[2]<<", "<<goalC[3]<<"]");
 
     ptrPubMP->publish(req);
 }

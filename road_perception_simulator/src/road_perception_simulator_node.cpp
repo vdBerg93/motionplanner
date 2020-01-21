@@ -101,8 +101,8 @@ int main(int argc, char **argv)
     ros::Rate r(25);
     RoadClass road;
     // Make message manager & node communication
-    ros::Publisher pubRoad = nh.advertise<car_msgs::LaneDet>("/centerline_coefficients",0);
-    ros::Publisher pubMarker = nh.advertise<visualization_msgs::MarkerArray>("centerline",1);
+    ros::Publisher pubRoad = nh.advertise<car_msgs::LaneDet>("/road/coefficients",0);
+    ros::Publisher pubMarker = nh.advertise<visualization_msgs::MarkerArray>("/road/markers",1);
     MsgManager msgManager(&pubRoad, &pubMarker, &road);
     ros::Subscriber subState = nh.subscribe("/carstate",0,&MsgManager::stateCallback, &msgManager);
 
