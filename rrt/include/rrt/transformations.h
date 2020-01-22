@@ -22,4 +22,7 @@ void transformPathCarToRoad(vector<Path>& path,const vector<double>& Cxy, const 
 void transformPathRoadToCar(vector<Path>& path, const vector<double>& Cxy, const vector<double>& Cxs, const Vehicle& veh);
 void transformPathCarToWorld(vector<Path>& path, const vector<double>& worldState);
 
+void rotateVelocityVector(double& Vx, double& Vy, const vector<double>& carPose);
+void transformVelocityToRoad(const double& x, const double& y, double& Vx, double& Vy, const vector<double>& Cxy);
+
 #endif

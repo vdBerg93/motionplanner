@@ -51,7 +51,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 		for(auto it = det.begin(); it!=det.end(); ++it){
 			// Convert the obstacles
 			transformPoseCarToRoad(it->obb.center.x,it->obb.center.y,it->obb.center.theta,req.Cxy,req.Cxs);
-			ROS_WARN_STREAM("TODO: Implement obstacle velocity bending");
+			transformVelocityToRoad(it->obb.center.x, it->obb.center.y,it->vel.linear.x, it->vel.linear.y, req.Cxy);
 		}
 		transformNodesCarToRoad(bestNodes,worldState, req.Cxy, req.Cxs, veh);
 		transformPoseCarToRoad(req.goal[0],req.goal[1],req.goal[2],req.Cxy,req.Cxs);
@@ -61,7 +61,9 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	MyRRT RRT(req.goal,req.laneShifts,req.Cxy, req.bend);	
 	RRT.det = det; RRT.carState = carPose; 
 	ROS_INFO_STREAM("Initializing tree...");
-	bestNodes.clear();
+	if (!commit_path){
+		bestNodes.clear();
+	}
 
 	initializeTree(RRT,veh,bestNodes,carPose);
 	for(auto it = RRT.tree.begin(); it!=RRT.tree.end(); it++){
@@ -80,7 +82,10 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 
 
 	// Select best path 
-	bestNodes.clear();	bestNodes = extractBestPath(RRT.tree,pubPtr);
+	if (!commit_path){
+		bestNodes.clear();	
+	}
+	bestNodes = extractBestPath(RRT.tree,pubPtr);
 	// Transform nodes to world coordinates
 	if(req.bend){	
 		if(debug_mode){ cout<<"bending nodes..."<<endl;}
@@ -141,13 +146,13 @@ car_msgs::Trajectory generateMPCmessage(const vector<Path>& path){
 	// 	}
 	// }
 
-	// // Double check
-	// for(int i = 0; i != (tra.x.size()-1); i++){
-	// 	if( (tra.x[i]==tra.x[i+1])&&(tra.y[i]==tra.y[i+1])){
-	// 		ROS_ERROR_STREAM("Still duplicates in message! Fix this code!");
-	// 		break;
-	// 	}
-	// }
+	// Double check
+	for(int i = 0; i != (tra.x.size()-1); i++){
+		if( (tra.x[i]==tra.x[i+1])&&(tra.y[i]==tra.y[i+1])){
+			ROS_ERROR_STREAM("Still duplicates in message! Fix this code!");
+			break;
+		}
+	}
 
 	return tra;
 }

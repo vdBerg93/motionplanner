@@ -21,7 +21,6 @@ MyRRT::MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts,
 	}
 
 void MyRRT::addInitialNode(const vector<double>& state){
-	ROS_INFO_STREAM("In empty tree fcn");
 	// Set the first node in the tree at the current preview point of the lateral controller
 	MyReference ref; 
 	// double xend {ctrl_dla}, yend {0}, res{0.1};
@@ -40,14 +39,11 @@ void MyRRT::addInitialNode(const vector<double>& state){
 }
 
 void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Node>& nodes, vector<double>& carState){
-	ROS_INFO_STREAM("In initialization function");
 	carState.push_back(0); carState.push_back(0); carState.push_back(0); carState.push_back(0); 
 	assert(carState.size()>=6);
-	ROS_INFO_STREAM("DB1");
 	// If committed path is empty, initialize tree with reference at (Dla,0)
 	if (nodes.size()==0){
 		makeEmptyTree:
-		ROS_INFO_STREAM("Initializing empty tree...");
 		assert(carState.size()>=6);
 		RRT.addInitialNode(carState);
 		ROS_INFO_STREAM("Initialized empty tree!");
@@ -77,7 +73,6 @@ void initializeTree(MyRRT& RRT, const Vehicle& veh, vector<Node>& nodes, vector<
 
 	// Check collisions, if collision initialize with empty tree
 	for(auto it = nodes.begin(); it!=nodes.end(); ++it){
-		ROS_INFO_STREAM("DB3");
 		for(int i = 0; i!=it->tra.size(); i++){
 			double Dobs = checkObsDistance(it->tra[i], RRT.det, RRT.carState);
 			if(Dobs==0){

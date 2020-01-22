@@ -313,3 +313,17 @@ void transformNodesWorldToCar(vector<Node>& nodes, const vector<double> carState
 		}
 	}
 }
+
+// Rotate the velocity vector to car frame
+void rotateVelocityVector(double& Vx, double& Vy, const double& angle){
+	double X = cos(angle)*Vx + sin(angle)*Vy;
+	double Y = -sin(angle)*Vx + cos(angle)*Vy;
+	Vx = X; Vy = Y;
+}
+
+void transformVelocityToRoad(const double& x, const double& y, double& Vx, double& Vy, const vector<double>& Cxy){
+	vector<double> Pclose = findClosestPointOnArc(x,y,Cxy);
+	double dydx_road = 2*Cxy[0]*Pclose[0] + Cxy[1];
+	double H_road = atan2(dydx_road,1);
+	rotateVelocityVector(Vx, Vy, H_road);
+}

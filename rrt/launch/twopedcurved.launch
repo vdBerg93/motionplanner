@@ -31,15 +31,11 @@
   <node pkg="tf2_ros" type="static_transform_publisher" name="very_inaccurate_odom" args="0 0 0 0 0 0 odom base_link"/>
 
   <!-- Launch Pedsim world -->
-  <!-- <include file="$(find pedsim_simulator)/launch/twoped_crossing.launch">  </include> -->
+  <include file="$(find pedsim_simulator)/launch/twopedcurved.launch">  </include>
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -x 0 -y 0 -z 0 -model prius"/>
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" respawn="true" />
-
-  <!-- Establish connection between pedsim and ros -->
-  <!--node pkg="person_control"       type="person_control_node"       name="person_control_node"       output="screen" /-->
-
 
 <!-- <include file="$(find lmpcc)/launch/lmpcc.launch"> </include> -->
   <!-- <include file="$(find lmpcc_obstacle_feed)/launch/lmpcc_obstacle_feed.launch"> </include> -->
