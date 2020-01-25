@@ -80,6 +80,10 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		if (RRT.bend){
 			double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
 			costS += RRT.Wcost[4]*Dgoallane;
+			if (Dgoallane>3.5){
+				endReached=0;
+				return;
+			}
 		}
 
 		// Check acceleration limits

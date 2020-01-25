@@ -88,7 +88,7 @@ bool Observer::updateControls(){
         // Longitudinal controller
         v_cmd = path.a_cmd[bestID];
         double v_error = v_cmd-carState[4];
-        a_cmd = 0.5*v_error;
+        a_cmd = 0.25*v_error;
         a_cmd = std::min(std::max(double(-1),a_cmd),double(1));
 
         // Lateral error calculation
@@ -125,7 +125,7 @@ bool Observer::updateControls(){
         double jaw_error = wrapToPi(road_heading-carState[2]);
 
         // Path curvature controller
-        double tla = 1;
+        double tla = 1.5;
         double xla = abs(carState[4])*tla;
         double veh_b = 1.61;
         double Kus = 0.0028;

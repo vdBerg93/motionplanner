@@ -274,7 +274,7 @@ void transformNodesRoadToCar(vector<Node>& nodes, const vector<double> carState,
 
 void transformNodesCarToRoad(vector<Node>& nodes, const vector<double> carState, const vector<double>& Cxy, const vector<double>& Cxs, const Vehicle& veh){
 	for(auto it = nodes.begin(); it!= nodes.end(); it++){
-			transformStateCarToRoad(it->state,Cxy, Cxs, veh);
+		transformStateCarToRoad(it->state,Cxy, Cxs, veh);
 		for(int i = 0; i!= it->ref.x.size(); i++){
 			transformPointCarToRoad(it->ref.x[i], it->ref.y[i], Cxy, Cxs);
 		}
@@ -295,7 +295,7 @@ void transformNodesCarToworld(vector<Node>& nodes, const vector<double> carState
 		}
 		// Loop through trajectory and transform
 		for(int j = 0; j!=it->tra.size(); j++){
-			transformPointCarToWorld(it->tra[j][0], it->tra[j][1], carState);
+			transformStateCarToWorld(it->tra[j],carState);
 		}
 	}
 }
@@ -309,7 +309,7 @@ void transformNodesWorldToCar(vector<Node>& nodes, const vector<double> carState
 		}
 		// Loop through trajectory and transform
 		for(int j = 0; j!=it->tra.size(); j++){
-			transformPointWorldToCar(it->tra[j][0], it->tra[j][1], carState);
+			transformStateCarToWorld(it->tra[j],carState);
 		}
 	}
 }
