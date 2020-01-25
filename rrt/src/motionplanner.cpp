@@ -16,7 +16,7 @@ void MotionPlanner::updateState(car_msgs::State msg){
 }
 
 
-bool MotionPlanner::resetPlanner(car_msgs::resetplanner::Request& req, car_msgs::resetplanner::Response& resp)
+bool MotionPlanner::resetPlanner(std_srvs::Empty::Request& req, std_srvs::Empty::Response& resp)
 {
 	motionplan.clear();
 	return true;

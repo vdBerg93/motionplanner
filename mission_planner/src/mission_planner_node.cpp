@@ -45,7 +45,7 @@ int main( int argc, char** argv ){
     ros::Rate rate(5);
 
     // Define simulation reset objects
-    ros::ServiceClient reset_planner_client_    = nh.serviceClient<car_msgs::resetplanner>("motionplanner/reset");
+    ros::ServiceClient reset_planner_client_    = nh.serviceClient<std_srvs::Empty>("motionplanner/reset");
     ros::ServiceClient reset_simulation_client_ = nh.serviceClient<std_srvs::Empty>("/gazebo/reset_world");
     ros::ServiceClient reset_ekf_client_= nh.serviceClient<robot_localization::SetPose>("/set_pose");
 
@@ -58,19 +58,19 @@ int main( int argc, char** argv ){
         if (msgManager.goalReceived){
             msgManager.sendMotionRequest();
 
-            if (goalReachedCheck(msgManager.goalW,msgManager.carPose)){
-                ROS_WARN_STREAM("Goal reached! Resetting simulation...");
+            // if (goalReachedCheck(msgManager.goalW,msgManager.carPose)){
+            //     ROS_WARN_STREAM("Goal reached! Resetting simulation...");
                 
-                std_srvs::Empty reset_msg_;
-                robot_localization::SetPose reset_pose_msg_;
-                car_msgs::resetplanner reset_planner_msg_;
+            //     std_srvs::Empty reset_msg_;
+            //     robot_localization::SetPose reset_pose_msg_;
+            //     // car_msgs::resetplanner reset_planner_msg_;
 
-                reset_simulation_client_.call(reset_msg_);
-                reset_ekf_client_.call(reset_pose_msg_);
-                reset_planner_client_.call(reset_planner_msg_);
-                simCount++;
-                ROS_ERROR_STREAM("Simulation count= "<<simCount);
-            }
+            //     reset_simulation_client_.call(reset_msg_);
+            //     reset_ekf_client_.call(reset_pose_msg_);
+            //     reset_planner_client_.call(reset_msg_);
+            //     simCount++;
+            //     ROS_ERROR_STREAM("Simulation count= "<<simCount);
+            // }
         }else{
             ROS_INFO_STREAM_THROTTLE(1,"Waiting for goal pose from Rviz...");
         }
@@ -83,6 +83,6 @@ bool goalReachedCheck(const vector<double>& carState, const vector<double>& goal
     return ( (abs(carState[0]-goalPose[0])<5));
 }
 
-
-
-
+std_srvs::Empty reset_msg_;
+ros::ServiceClient reset_planner_client_    = nh.serviceClient<std_srvs::Empty>("motionplanner/reset");
+reset_planner_client_.call(reset_msg_);

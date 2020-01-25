@@ -7,6 +7,7 @@ add_compile_options(-std=c++11)
 set( msg_dependencies
 	  car_msgs
   	std_msgs
+    std_srvs
  	  geometry_msgs
 )
 
