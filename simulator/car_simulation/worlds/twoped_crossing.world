@@ -185,7 +185,7 @@
       </link>
     </model>
     <road name='Road'>
-      <width>8</width>
+      <width>6</width>
       <point>-100 0 0</point>
       <point>100 0 0</point>
       <material>
