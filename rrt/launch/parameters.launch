@@ -12,7 +12,7 @@
 	<param 	name="motionplanner/replan" value="1"/>
 	<param 	name="motionplanner/weight_distance" value="10"/>
 	<param 	name="motionplanner/weight_curvature" value="5"/>
-	<param 	name="motionplanner/weight_obstacle_gain" value="0"/>
+	<param 	name="motionplanner/weight_obstacle_gain" value="10"/>
 	<!-- OBSTACLE WEIGHTS -->
 	<!-- slope value small, distance that increases cost large-->
 	<!-- weight = 4 gives cost up to approximately 1m. W=2 aprox 2m -->

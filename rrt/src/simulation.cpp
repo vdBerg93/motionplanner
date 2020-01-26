@@ -3,7 +3,7 @@
 #include "rrt/controller.h"
 #include "rrt/simulation.h"
 #include "rrt/controller.h"
-
+#include "rrt/transformations.h"
 void enforceConstraints(const double& min, const double& max, double& val){
     val = std::max(std::min(val,max),min);
 }
@@ -66,6 +66,16 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		x[8] = ref.v[control.IDwp+LAlong];
 		x[9] = ctrlCmd.dc;		// Control logging
 		stateArray.push_back(x);									// Add state to statearray
+		
+		state_type x_world = x;
+		transformPointCarToWorld(x_world[0],x_world[1],worldState);
+		double Dlane = abs(x_world[1]);
+		if(Dlane>3){
+			// ROS_ERROR_STREAM("OUT OF BOUNDS!!!!!!!!!");
+			endReached = false;
+			fail_collision++;
+			return;
+		}
 		// ****** CHECK COLLISION *****
 		double Dobs = checkObsDistance(stateArray.back(), RRT.det, RRT.carState);
 		if (Dobs==0){ 	
@@ -77,6 +87,7 @@ void Simulation::propagate(const MyRRT& RRT, Controller control, const MyReferen
 		costE += x[4]*sim_dt;
 		double kappa = tan(x[3])/veh.L;								// Vehicle path curvature
 		costS += RRT.Wcost[0]*x[4]*sim_dt + RRT.Wcost[1]*abs(kappa) + RRT.Wcost[2]*exp(-RRT.Wcost[3]*Dobs);
+		costS += Dlane*RRT.Wcost[4];
 		if (RRT.bend){
 			double Dgoallane = getDistToLane(x[0],x[1],RRT.laneShifts[0],RRT.Cxy);
 			costS += RRT.Wcost[4]*Dgoallane;

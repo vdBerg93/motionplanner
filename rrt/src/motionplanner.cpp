@@ -78,7 +78,7 @@ void MotionPlanner::planMotion(car_msgs::MotionRequest req){
 	ROS_INFO_STREAM("---------"<<endl<<"Received request, processing...");
 	// Update variables
 	Vehicle veh; veh.setPrius();	
-	vector<double> worldState = state;
+	worldState = state;
 	vector<double> carPose = transformStateToLocal(worldState);
 	updateLookahead(carPose[4]);	updateReferenceResolution(carPose[4]); 
 	// debug fixing of ref_res =nan

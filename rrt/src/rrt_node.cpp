@@ -7,21 +7,9 @@ bool debug_reference = 0;
 bool debug_velocity = false;
 bool draw_states = 0;
 bool debug_sim = 0;
-bool commit_path = false;
+bool commit_path = true;
 bool obs_use_pred = true;
 double Tcommit {0.25};
-
-// Global variables
-double sim_dt;
-double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
-double ref_res, ref_int, ref_mindist, vmax, vgoal;
-double ay_road_max;
-
-// Failure counters
-int fail_iterlimit{0};
-int fail_collision{0};
-int fail_acclimit{0};
-int sim_count{0};
 
 // Include STDLIB headers
 #include <ros/ros.h>
@@ -37,6 +25,20 @@ int sim_count{0};
 #include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/MultiArrayDimension.h>
 #include <vision_msgs/Detection2DArray.h>
+
+// Global variables
+double sim_dt;
+double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
+double ref_res, ref_int, ref_mindist, vmax, vgoal;
+double ay_road_max;
+std::vector<double> worldState;
+
+// Failure counters
+int fail_iterlimit{0};
+int fail_collision{0};
+int fail_acclimit{0};
+int sim_count{0};
+
 
 // Include messages
 #include "car_msgs/getobstacles.h"
