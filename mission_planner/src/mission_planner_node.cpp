@@ -82,7 +82,3 @@ int main( int argc, char** argv ){
 bool goalReachedCheck(const vector<double>& carState, const vector<double>& goalPose){
     return ( (abs(carState[0]-goalPose[0])<5));
 }
-
-std_srvs::Empty reset_msg_;
-ros::ServiceClient reset_planner_client_    = nh.serviceClient<std_srvs::Empty>("motionplanner/reset");
-reset_planner_client_.call(reset_msg_);

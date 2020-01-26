@@ -7,7 +7,7 @@ bool debug_reference = 0;
 bool debug_velocity = false;
 bool draw_states = 0;
 bool debug_sim = 0;
-bool commit_path = true;
+bool commit_path = false;
 bool obs_use_pred = true;
 double Tcommit {0.25};
 

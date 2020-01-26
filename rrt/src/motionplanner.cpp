@@ -210,7 +210,7 @@ car_msgs::Trajectory generateMPCmessage(const vector<Path>& path){
 
 void filterMPCmessage(car_msgs::Trajectory& msg){
 	car_msgs::Trajectory msgFiltered;
-	double interval = 5; // Distance between waypoints
+	double interval = 3; // Distance between waypoints
 	double d = 0;
 	for(int i = 1; i!=msg.x.size(); i++){
 		if (d==0){
