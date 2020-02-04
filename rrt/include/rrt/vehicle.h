@@ -35,6 +35,29 @@ class Vehicle{
             rho = 4.77;             // From article
             Kus = 0.018;            // Manually tuned
         };
+
+        void setPrius(){
+            dmax = 0.52;            // From specs     
+            ddmax = 0.3294;         // From article
+            Td = 0.3;               // From article
+            Ta = 0.3;               // From article
+            amin = -6;              // From article
+            amax = 2;               // From article
+            L = 2.7;                // From specs
+            double lf = 1.0868;     // From specs
+            double lr = 1.6132;     // From specs
+            Lrear = 1;              // Guessed, from rear axle to rear bumper
+            Lfront = 2.7+0.5;       // Guessed, from rear axle to front bumper
+            w = 2;               // Internet: 1.76m -> round up 2m
+            b = lr;                 // From specs
+            rho = 5.95;             // From specs
+
+            double Cf = 22201;      // From specs
+            double Cr = 22201;      // From specs
+            double m = 950+640;     // From specs
+            Kus = (m/L)*(lr/Cf - lf/Cr);
+            Vch = 20;
+        }
 };
 
 #endif

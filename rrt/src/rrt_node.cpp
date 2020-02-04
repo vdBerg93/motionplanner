@@ -1,13 +1,15 @@
 // Global vars for debugging and plotting
-bool draw_tree =0;
+bool draw_tree =1;
 bool draw_obs = 0;
 bool draw_final_path = 0;
 bool debug_mode = 0;
 bool debug_reference = 0;
+bool debug_velocity = false;
 bool draw_states = 0;
 bool debug_sim = 0;
-bool commit_path = 1;
-double Tcommit {0.4};
+bool commit_path = true;
+bool obs_use_pred = true;
+double Tcommit {0.25};
 
 // Include STDLIB headers
 #include <ros/ros.h>
@@ -29,6 +31,14 @@ double sim_dt;
 double ctrl_tla, ctrl_dla, ctrl_mindla, ctrl_dlavmin, ctrl_Kp, ctrl_Ki;
 double ref_res, ref_int, ref_mindist, vmax, vgoal;
 double ay_road_max;
+std::vector<double> worldState;
+
+// Failure counters
+int fail_iterlimit{0};
+int fail_collision{0};
+int fail_acclimit{0};
+int sim_count{0};
+
 
 // Include messages
 #include "car_msgs/getobstacles.h"
@@ -38,6 +48,9 @@ double ay_road_max;
 #include "car_msgs/Trajectory.h"
 #include "car_msgs/MotionPlan.h"
 #include "car_msgs/Obstacle2D.h"
+#include "car_msgs/resetplanner.h"
+
+#include <std_srvs/Empty.h>
 
 // Include header files
 #include "rrt/functions.h"
@@ -59,16 +72,6 @@ double ay_road_max;
 #include "testers.cpp"
 #include "motionplanner.cpp"
 
-/* #############################
-	CRITICAL TODO'S
-##############################*/
-// 1. Check cost function and node sorting heuristics
-
-
-
-// #include "matlabgen/transformCarToRoad.h"
-// #include "matlabgen/transformCarToRoad.cpp"
-
 void updateParameters(){
 	// Get parameters from server
 	ros::param::get("ctrl/tla",ctrl_tla);
@@ -82,40 +85,43 @@ void updateParameters(){
 }
 
 int main( int argc, char** argv ){	
+	// cout.precision(3);
 	// Initialize ros node handle
 	ros::init(argc, argv, "rrt_node");
-	ros::NodeHandle nh; ros::Rate rate(2);
+	ros::NodeHandle nh; ros::Rate rate(20);
 	// Get parameters from server
 	updateParameters();
 	// Initialize motion planner object that handles services & callbacks
 	MotionPlanner motionPlanner;
 	// Create marker publisher for Rviz
-	ros::Publisher pubMarker = nh.advertise<visualization_msgs::Marker>("visualization_marker",10);
+	ros::Publisher pubMarker = nh.advertise<visualization_msgs::MarkerArray>("tree_markerarray",1);
 	motionPlanner.pubPtr = &pubMarker; 	// Initialize global pointer to marker publisher
-	
-	// Register service with the master
-	//ros::ServiceServer server = nh.advertiseService("planmotion", &MotionPlanner::planMotion,&motionPlanner);
-	
 	// Motion request subscriber
-	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",100,&MotionPlanner::planMotion, &motionPlanner);
-
+	ros::Subscriber sub  = nh.subscribe("/motionplanner/request",0,&MotionPlanner::planMotion, &motionPlanner);
 	// Publisher for best path
-	ros::Publisher pubBest = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",100);
+	ros::Publisher pubBest = nh.advertise<car_msgs::MotionResponse>("/motionplanner/bestpath",1);
 	motionPlanner.pubBest = &pubBest;
 	// Publisher for committed path
-	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",100);
+	ros::Publisher pubPlan = nh.advertise<car_msgs::MotionResponse>("/motionplanner/response",1);
 	motionPlanner.pubPlan = &pubPlan;
 
+	// Path
+	ros::Publisher pubMPC = nh.advertise<car_msgs::Trajectory>("/path_publisher/path",1);
+	motionPlanner.pubMPC = &pubMPC;
+
+	// State subscriber
 	ros::Subscriber subState = nh.subscribe("carstate",1,&MotionPlanner::updateState, &motionPlanner);
+	// ros::Subscriber subState = nh.subscribe("/amcl_pose",1,&MotionPlanner::updateState, &motionPlanner);
+
+	// Reset service
+	ros::ServiceServer server = nh.advertiseService("/motionplanner/reset",&MotionPlanner::resetPlanner,&motionPlanner);
 
 	// Register client for obstacle detector
 	ros::ServiceClient client = nh.serviceClient<car_msgs::getobstacles>("getobstacles");
 	motionPlanner.clientPtr = &client;
 
 	// Give control to ROS
-	cout<<"RRT Motion Planning Node running..."<<endl;
-	while(ros::ok()){
-		ros::spin();
-	}
+	cout<<"RRT Node running..."<<endl;
+	ros::spin();
 }
 

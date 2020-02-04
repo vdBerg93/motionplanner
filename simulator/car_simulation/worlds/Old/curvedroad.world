@@ -1,0 +1,261 @@
+<sdf version='1.6'>
+  <world name='default'>
+    <scene>
+      <grid>0</grid>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>1</shadows>
+    </scene>
+    <light name='sun' type='directional'>
+      <cast_shadows>1</cast_shadows>
+      <pose frame=''>0 0 10 0 -0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+    <model name='ground'>
+      <link name='body'>
+        <collision name='geom'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>1 1</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>100</mu>
+                <mu2>50</mu2>
+              </ode>
+              <torsional>
+                <ode/>
+              </torsional>
+            </friction>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+          </surface>
+          <max_contacts>10</max_contacts>
+        </collision>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+      <static>1</static>
+    </model>
+    <road name='my_road'>
+      	<width>7.34</width>
+	<point>	        0         0         0	</point>
+	<point>	   -0.0040    0.8000         0	</point>
+	<point>	   -0.0160    1.5999         0	</point>
+	<point>	   -0.0360    2.3996         0	</point>
+	<point>	   -0.0640    3.1991         0	</point>
+	<point>	   -0.1000    3.9983         0	</point>
+	<point>	   -0.1440    4.7971         0	</point>
+	<point>	   -0.1959    5.5954         0	</point>
+	<point>	   -0.2559    6.3932         0	</point>
+	<point>	   -0.3238    7.1903         0	</point>
+	<point>	   -0.3997    7.9867         0	</point>
+	<point>	   -0.4835    8.7823         0	</point>
+	<point>	   -0.5753    9.5770         0	</point>
+	<point>	   -0.6750   10.3707         0	</point>
+	<point>	   -0.7827   11.1634         0	</point>
+	<point>	   -0.8983   11.9551         0	</point>
+	<point>	   -1.0218   12.7455         0	</point>
+	<point>	   -1.1532   13.5346         0	</point>
+	<point>	   -1.2925   14.3224         0	</point>
+	<point>	   -1.4397   15.1087         0	</point>
+	<point>	   -1.5947   15.8935         0	</point>
+	<point>	   -1.7575   16.6768         0	</point>
+	<point>	   -1.9282   17.4584         0	</point>
+	<point>	   -2.1067   18.2382         0	</point>
+	<point>	   -2.2930   19.0162         0	</point>
+	<point>	   -2.4870   19.7923         0	</point>
+	<point>	   -2.6888   20.5664         0	</point>
+	<point>	   -2.8983   21.3385         0	</point>
+	<point>	   -3.1156   22.1085         0	</point>
+	<point>	   -3.3405   22.8762         0	</point>
+	<point>	   -3.5731   23.6416         0	</point>
+	<point>	   -3.8133   24.4047         0	</point>
+	<point>	   -4.0612   25.1653         0	</point>
+	<point>	   -4.3166   25.9234         0	</point>
+	<point>	   -4.5796   26.6790         0	</point>
+	<point>	   -4.8502   27.4318         0	</point>
+	<point>	   -5.1283   28.1819         0	</point>
+	<point>	   -5.4138   28.9292         0	</point>
+	<point>	   -5.7068   29.6736         0	</point>
+	<point>	   -6.0073   30.4151         0	</point>
+	<point>	   -6.3151   31.1535         0	</point>
+	<point>	   -6.6303   31.8887         0	</point>
+	<point>	   -6.9529   32.6208         0	</point>
+	<point>	   -7.2827   33.3497         0	</point>
+	<point>	   -7.6199   34.0752         0	</point>
+	<point>	   -7.9642   34.7972         0	</point>
+	<point>	   -8.3158   35.5158         0	</point>
+	<point>	   -8.6745   36.2309         0	</point>
+	<point>	   -9.0404   36.9423         0	</point>
+	<point>	   -9.4134   37.6501         0	</point>
+	<point>	   -9.7934   38.3540         0	</point>
+	<point>	  -10.1804   39.0542         0	</point>
+	<point>	  -10.5745   39.7504         0	</point>
+	<point>	  -10.9754   40.4427         0	</point>
+	<point>	  -11.3833   41.1309         0	</point>
+	<point>	  -11.7980   41.8150         0	</point>
+	<point>	  -12.2196   42.4949         0	</point>
+	<point>	  -12.6479   43.1706         0	</point>
+	<point>	  -13.0830   43.8419         0	</point>
+	<point>	  -13.5247   44.5089         0	</point>
+	<point>	  -13.9732   45.1714         0	</point>
+	<point>	  -14.4282   45.8294         0	</point>
+	<point>	  -14.8897   46.4828         0	</point>
+	<point>	  -15.3578   47.1316         0	</point>
+	<point>	  -15.8323   47.7756         0	</point>
+	<point>	  -16.3133   48.4149         0	</point>
+	<point>	  -16.8006   49.0493         0	</point>
+	<point>	  -17.2943   49.6789         0	</point>
+	<point>	  -17.7942   50.3034         0	</point>
+	<point>	  -18.3003   50.9230         0	</point>
+	<point>	  -18.8126   51.5374         0	</point>
+	<point>	  -19.3310   52.1467         0	</point>
+	<point>	  -19.8555   52.7508         0	</point>
+	<point>	  -20.3860   53.3496         0	</point>
+	<point>	  -20.9225   53.9430         0	</point>
+	<point>	  -21.4649   54.5311         0	</point>
+	<point>	  -22.0131   55.1137         0	</point>
+	<point>	  -22.5671   55.6908         0	</point>
+	<point>	  -23.1269   56.2624         0	</point>
+	<point>	  -23.6924   56.8283         0	</point>
+	<point>	  -24.2635   57.3885         0	</point>
+	<point>	  -24.8401   57.9430         0	</point>
+	<point>	  -25.4223   58.4917         0	</point>
+	<point>	  -26.0099   59.0345         0	</point>
+	<point>	  -26.6030   59.5714         0	</point>
+	<point>	  -27.2013   60.1024         0	</point>
+	<point>	  -27.8050   60.6274         0	</point>
+	<point>	  -28.4139   61.1463         0	</point>
+	<point>	  -29.0279   61.6591         0	</point>
+	<point>	  -29.6470   62.1657         0	</point>
+	<point>	  -30.2712   62.6662         0	</point>
+	<point>	  -30.9003   63.1603         0	</point>
+	<point>	  -31.5344   63.6481         0	</point>
+	<point>	  -32.1733   64.1296         0	</point>
+	<point>	  -32.8170   64.6046         0	</point>
+	<point>	  -33.4654   65.0732         0	</point>
+	<point>	  -34.1184   65.5353         0	</point>
+	<point>	  -34.7760   65.9909         0	</point>
+	<point>	  -35.4382   66.4398         0	</point>
+	<point>	  -36.1048   66.8821         0	</point>
+	<point>	  -36.7758   67.3177         0	</point>
+	<point>	  -37.4511   67.7465         0	</point>
+	<point>	  -38.1307   68.1686         0	</point>
+	<point>	  -38.8145   68.5839         0	</point>
+	<point>	  -39.5024   68.9923         0	</point>
+	<point>	  -40.1943   69.3939         0	</point>
+	<point>	  -40.8902   69.7884         0	</point>
+	<point>	  -41.5901   70.1760         0	</point>
+	<point>	  -42.2937   70.5566         0	</point>
+	<point>	  -43.0012   70.9302         0	</point>
+	<point>	  -43.7123   71.2966         0	</point>
+	<point>	  -44.4271   71.6559         0	</point>
+	<point>	  -45.1454   72.0080         0	</point>
+	<point>	  -45.8672   72.3530         0	</point>
+	<point>	  -46.5924   72.6907         0	</point>
+	<point>	  -47.3210   73.0211         0	</point>
+	<point>	  -48.0528   73.3442         0	</point>
+	<point>	  -48.7879   73.6600         0	</point>
+	<point>	  -49.5260   73.9685         0	</point>
+	<point>	  -50.2672   74.2695         0	</point>
+	<point>	  -51.0114   74.5631         0	</point>
+	<point>	  -51.7584   74.8493         0	</point>
+	<point>	  -52.5083   75.1279         0	</point>
+	<point>	  -53.2610   75.3991         0	</point>
+	<point>	  -54.0163   75.6627         0	</point>
+	<point>	  -54.7742   75.9188         0	</point>
+	<point>	  -55.5346   76.1672         0	</point>
+	<point>	  -56.2975   76.4081         0	</point>
+	<point>	  -57.0628   76.6413         0	</point>
+	<point>	  -57.8303   76.8668         0	</point>
+	<point>	  -58.6001   77.0847         0	</point>
+	<point>	  -59.3720   77.2948         0	</point>
+	<point>	  -60.1460   77.4972         0	</point>
+	<point>	  -60.9219   77.6919         0	</point>
+	<point>	  -61.6998   77.8788         0	</point>
+	<point>	  -62.4795   78.0579         0	</point>
+	<point>	  -63.2609   78.2292         0	</point>
+	<point>	  -64.0440   78.3926         0	</point>
+	<point>	  -64.8287   78.5483         0	</point>
+	<point>	  -65.6150   78.6961         0	</point>
+	<point>	  -66.4026   78.8360         0	</point>
+	<point>	  -67.1917   78.9680         0	</point>
+	<point>	  -67.9820   79.0921         0	</point>
+	<point>	  -68.7735   79.2084         0	</point>
+	<point>	  -69.5661   79.3167         0	</point>
+	<point>	  -70.3598   79.4170         0	</point>
+	<point>	  -71.1544   79.5095         0	</point>
+	<point>	  -71.9499   79.5939         0	</point>
+	<point>	  -72.7463   79.6705         0	</point>
+	<point>	  -73.5433   79.7390         0	</point>
+	<point>	  -74.3410   79.7996         0	</point>
+	<point>	  -75.1393   79.8522         0	</point>
+	<point>	  -75.9380   79.8968         0	</point>
+	<point>	  -76.7372   79.9334         0	</point>
+	<point>	  -77.5367   79.9621         0	</point>
+	<point>	  -78.3364   79.9827         0	</point>
+	<point>	  -79.1363   79.9953         0	</point>
+	<point>	  -79.9363   80.0000         0	</point>
+    </road>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type='adiabatic'/>
+    <physics name='default_physics' default='0' type='ode'>
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    <audio>
+      <device>default</device>
+    </audio>
+    <wind/>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+    <state world_name='default'>
+      <sim_time>20 968000000</sim_time>
+      <real_time>21 26819011</real_time>
+      <wall_time>1569757881 334221159</wall_time>
+      <iterations>20968</iterations>
+      <model name='ground'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='body'>
+          <pose frame=''>0 0 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <light name='sun'>
+        <pose frame=''>0 0 10 0 -0 0</pose>
+      </light>
+    </state>
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose frame=''>67.9453 -27.5943 11.5053 0 0.275643 2.35619</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+  </world>
+</sdf>

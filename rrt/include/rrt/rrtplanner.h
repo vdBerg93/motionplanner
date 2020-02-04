@@ -29,6 +29,7 @@ struct MyReference{
     vector<double> y;
     vector<double> v;
     signed int dir;
+    double aend;
 };
 
 struct Node{        
@@ -45,18 +46,26 @@ struct Node{
     void addChild(int child){children.push_back(child);}
 };
 
+#include <car_msgs/Obstacle2D.h>
+
 class MyRRT{
     public:
         int sortLimit;
         bool reverseAllowed;
         bool goalReached;
+        bool bend;
         vector<double> goalPose;
         signed int direction;
         vector<double> laneShifts;   // Lane shifts. 1st element is goal lane. 2nd element is other lane
         vector<double> Cxy;
 
+        // For other functions only (sim. etc)
+        vector<car_msgs::Obstacle2D> det;
+        vector<double> carState;
+        double Wcost[5];
+
         // Tree iniitalization
-        MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy);
+        MyRRT(const vector<double>& _goalPose, const vector<double>& _laneShifts, const vector<double>& _Cxy, const bool& _bend);
         void addInitialNode(const vector<double>& state);
         // Tree operations
         void addNode(Node node);
@@ -71,6 +80,7 @@ class MyRRT{
 };
 double initializeTree(MyRRT& RRT, const Vehicle& veh, vector<MyReference>& path, vector<double> carState);
 geometry_msgs::Point sampleAroundVehicle(vector<double> sampleBounds);
+geometry_msgs::Point sampleAroundVehicle(const vector<double> goalPose);
 geometry_msgs::Point sampleOnLane(const vector<double>& Cxy, vector<double> laneShifts, double Lmax);
 void expandTree(Vehicle& veh, MyRRT& RRT, ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const vector<double>& Cxy);
 vector<int> sortNodesExplore(const MyRRT& rrt, const geometry_msgs::Point& sample);
@@ -78,13 +88,19 @@ vector<int> sortNodesOptimize(const MyRRT& rrt, const geometry_msgs::Point& samp
 bool feasibleNode(const MyRRT& rrt, const Node& node, const geometry_msgs::Point& sample);
 bool feasibleGoalBias(const MyRRT& rrt);
 float dubinsDistance(geometry_msgs::Point S, Node N, int dir);
-visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T);
-visualization_msgs::Marker createReferenceMsg(int iD, const MyReference& ref);
+visualization_msgs::Marker createStateMsg(int ID, const vector<vector<double>> T, bool goalReached);
+visualization_msgs::Marker createEmptyMsg();
 
 
 // Reference generation functions
-void generateVelocityProfile(	MyReference& ref, const double& _v0, const int& IDwp, const double& vmax, const double& vend);
+void generateVelocityProfile(MyReference& ref, const double& a0, const int& IDwp, const double& v0, const double& vmax, const vector<double>& goal, bool GB);
 MyReference getReference(geometry_msgs::Point sample, Node node, signed int dir);
+vector<double> getCoefficients(const double& Sf, const double& v0, const double& vf, const double& a0, const double& af);
+double getVelocity(const double& v0, const vector<double>& coef, const double& t);
+vector<double> getVelocityVector(const double& v0, const vector<double>& coef, const vector<double>& Tpath);
+vector<double> getTimeVector(const vector<double>& coef, const double& t0, const double& v0, const double& a0, const double& af, const double& Sf, const int& N);
+void showVelocityProfile(const MyReference& ref);
+
 
 /* ----------------------------------------
         SIMPLE DATA OPERATIONS

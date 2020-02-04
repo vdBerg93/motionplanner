@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pcl_converter)
 ## Compile as C++11, supported in ROS Kinetic and newer
-## add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS 
@@ -12,8 +12,15 @@ find_package(catkin REQUIRED COMPONENTS
 					pcl_conversions
 					visualization_msgs
 					pcl_ros 
+					tf
+					dynamic_reconfigure
 					#message_generation
 					#${msg_dependencies}
+)
+
+generate_dynamic_reconfigure_options(
+  cfg/Test.cfg
+  #...
 )
 
 ## Define catkin package
@@ -25,8 +32,12 @@ include_directories(include ${pcl_msgs_INCLUDE_DIRS})
 include_directories(include ${pcl_ros_INCLUDE_DIRS})
 include_directories(include ${/include}) 
 
+
 # Declare executables
 add_executable(${PROJECT_NAME}_node src/${PROJECT_NAME}_node.cpp)
+
+# Add dependencies
+add_dependencies(pcl_converter_node ${PROJECT_NAME}_gencfg)
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})

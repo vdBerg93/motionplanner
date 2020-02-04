@@ -8,6 +8,9 @@
   <maintainer email="q.w.a.vanderslot@student.tudelft.nl">K van der Slot</maintainer>
   <license>TODO</license>
 
+  <depend>tf</depend>
+  <depend>dynamic_reconfigure</depend>
+
   <build_depend>car_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>pcl_msgs</build_depend>

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="world_name" default="myworldped.world"/>
+  <arg name="gazebo_gui" default="true"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="verbose" value="true"/>
+    	<arg name="world_name" value="$(find car_simulation)/worlds/$(arg world_name)"/>
+
+    <arg name="gui" value="$(arg gazebo_gui)" />
+    <!--   
+	<arg name="world_name" value="$(find car_simulation)/worlds/new.world"/>
+    <arg name="world_name" value="$(find car_simulation)/worlds/$(arg world_name)"/>
+    <arg name="world_name" value="$(find car_simulation)/worlds/simple_city.world"/>
+  -->
+
+
+  </include>
+</launch>

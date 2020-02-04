@@ -3,17 +3,17 @@
 --------------------------------------------*/
 #include "rrt/collision.h"
 
-vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle2D>& det, const double& t){
-    ROS_WARN_STREAM_THROTTLE(5,"IN CD - getOBBVec: make carstate variable");
-    vector<double> carState = {0,0,0,0,33,0,0};
-    
+vector<OBB> getOBBvector(const vector<car_msgs::Obstacle2D>& det, const double& t, const vector<double>& carState){
     vector<OBB> obstacleVector;
     for(int i = 0; i!=det.size(); i++){
         // Get OBB for future state
         double h = det[i].obb.center.theta;
-        OBB obs(Vector2D(det[i].obb.center.x + (det[i].vel.linear.x+cos(h)*carState[4])*t,
-                         det[i].obb.center.y + (det[i].vel.linear.y+sin(h)*carState[4])*t),
-                         det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
+        // OBB obs(Vector2D(det[i].obb.center.x + (det[i].vel.linear.x+cos(h)*carState[4])*t,
+        //                 det[i].obb.center.y + det[i].vel.linear.y*t),
+        //                 det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
+        OBB obs(Vector2D(det[i].obb.center.x + det[i].vel.linear.x*t,
+                        det[i].obb.center.y + det[i].vel.linear.y*t),
+                        det[i].obb.size_x/2,det[i].obb.size_y/2,det[i].obb.center.theta);
         obstacleVector.push_back(obs);
     }
 
@@ -21,18 +21,16 @@ vector<OBB> getOBBvector(ros::Publisher* ptrPub, const vector<car_msgs::Obstacle
     return obstacleVector;
 }
 
-bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::Obstacle2D>& det){
-    //return false; // Override collision check
-    // Quickly check if trajectory exceeds the domain
-    ROS_WARN_ONCE("TODO: In collision, implement domain check!");
-    // for(int index = 0; index!=T.size(); index++){
-    //     double xmax{25}, xmin{-25}, ymax{25}, ymin{-25};
-    //     if(T[index][0]>xmax | T[index][0]<xmin | T[index][1]>ymax | T[index][1]<ymin){
-    //         return true;
-    //     }
-    // }
-    // Check if the trajectory2d obb separating axis theorem2d obb separating axis theorem collides with obstacles
+double checkObsDistance(const vector<double>& states, const vector<car_msgs::Obstacle2D>& det, const vector<double>& carState){
+    double t;
+    if (obs_use_pred){
+        t = states[6];
+    }else{
+        t = 0;
+    }
+    // t = 0;
     
+<<<<<<< HEAD
     for(int index = 0; index !=T.size(); index++){
         double t = T[index][6];
         // double t = 0;
@@ -44,11 +42,30 @@ bool checkCollision(ros::Publisher* ptrPub,StateArray T, const vector<car_msgs::
             if (intersects(vOBB,obstacleVector[j])){
                 return true;
             }
+=======
+    vector<OBB> obstacleVector = getOBBvector(det,t,carState);
+    Vector2D vPos(states[0]+1.424*cos(states[2]),states[1]+1.424*sin(states[2]));
+    ROS_WARN_STREAM_THROTTLE(5,"In CD: Check vehicle dimensions");
+    OBB vOBB(vPos,2,4.848,states[2]); // Create vehicle OBB
+
+    double dist2closest = 10000;
+    for(int j = 0; j !=obstacleVector.size(); j++){
+        double D = getOBBdist(vOBB,obstacleVector[j]);
+        assert( (D>=0)&&"Obstacle distance is negative!");
+        // ROS_INFO_STREAM("Obs dist="<<D);
+        if (D==0){
+            return 0;
+        }else if (D < dist2closest){
+            dist2closest = D;
+>>>>>>> newcostfunction
         }
     }
     // No collisions
-    return false;
+    return dist2closest;
 }
+
+
+
 
 void OBB::setVertices(){
     verticesX[0] = pos.x+cos(o)*(h/2)-sin(o)*(w/2);             // FL
@@ -92,18 +109,19 @@ void OBB::findMaxMin(float x, float y){
 }
 
 // Collison checking two rectangles OBB using the Separating Axis Theorem
-bool intersects(OBB a, OBB b){
+double getOBBdist(OBB a, OBB b){
     // http://blog.marcher.co/sat1/
     // https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
     //SWRI_PROFILE("intersects");
+
     // circle collision optimization
-    Vector2D d(a.pos.x-b.pos.x, a.pos.y-b.pos.y); // change this operation
-    float distSq = myDot(d,d);
-    float r = max(a.w, a.h) + max(b.w, b.h);
-    if (distSq > r*r){
-        //cout<<"passed circle test! \n \n"<<endl;
-        return false;
-    }
+    // Vector2D d(a.pos.x-b.pos.x, a.pos.y-b.pos.y); // change this operation
+    // float distSq = myDot(d,d);
+    // float r = max(a.w, a.h) + max(b.w, b.h);
+    // if (distSq > r*r){
+    //     //cout<<"passed circle test! \n \n"<<endl;
+    //     return false;
+    // }
     // SAT
     // Check for first OBB
     float axis[2];
@@ -112,9 +130,15 @@ bool intersects(OBB a, OBB b){
         float aProj[2] {a.maxMin[0],a.maxMin[1]};
         b.findMaxMin(a.normsX[i],a.normsY[i]);
         float bProj[2] {b.maxMin[0],b.maxMin[1]};
-        // Check is separating axis condition is true
-        if(aProj[0] < bProj[1] || bProj[0] < aProj[1]){
-            return false;
+        // Check if this axis gives a separating axis
+        // float D1 = bProj[0]-aProj[1];
+        // float D2 = aProj[0]-bProj[1];
+        float D1 = bProj[1]-aProj[0];
+        float D2 = aProj[1]-bProj[0];
+        if (D1>0){
+            return D1;
+        }else if (D2>0){
+            return D2;
         }
     }
    for(int i =0; i <= 3; i++){
@@ -122,47 +146,90 @@ bool intersects(OBB a, OBB b){
         float aProj[2] {a.maxMin[0],a.maxMin[1]};
         b.findMaxMin(b.normsX[i],b.normsY[i]);
         float bProj[2] {b.maxMin[0],b.maxMin[1]};
-        // Check is separating axis condition is true
-        if(aProj[0] < bProj[1] || bProj[0] < aProj[1]){
-            return false;
+        // Check if this axis gives a separating axis
+        // float D1 = bProj[0]-aProj[1];
+        // float D2 = aProj[0]-bProj[1];
+        float D1 = bProj[1]-aProj[0];
+        float D2 = aProj[1]-bProj[0];
+        if (D1>0){
+            return D1;
+        }else if (D2>0){
+            return D2;
         }
     }
-    return true;
+    // No separating axis exists -> intersection
+    return 0;
 }
 
-
-// void drawObstacles(ros::Publisher* ptrPub,vector<OBB> obstacleVector){
-//     for(int index = 0; index<obstacleVector.size(); index++){
-//         visualization_msgs::Marker msg;
-//         // Initialize marker message
-//         msg.header.frame_id = "map";
-//         msg.header.stamp = ros::Time::now();
-//         msg.ns = "obstacles";
-//         msg.action = visualization_msgs::Marker::ADD;
-//         msg.pose.orientation.w = 1.0;
-//         msg.id = index;
-//         msg.type = visualization_msgs::Marker::POINTS;
-//         msg.scale.x = 1;	// msg/LINE_LIST markers use only the x component of scale, for the line width
-
-//         // Line strip is red
-//         msg.color.r = 1.0;
-//         msg.color.a = 1.0;
-//         msg.lifetime = ros::Duration(10);
-        
-//         geometry_msgs::Point p;// int i = 0;
-//         p.x = obstacleVector[index].verticesX[3];
-//         p.y = obstacleVector[index].verticesY[3];
-//         p.z = 0;
-//         msg.points.push_back(p);
-//         for(int i = 0; i<=3; i++){
-//             p.x = obstacleVector[index].verticesX[i];
-//             p.y = obstacleVector[index].verticesY[i];
-//             p.z = 0;
-//             msg.points.push_back(p);
-//             msg.points.push_back(p);
-//         }
-//         msg.points.erase(msg.points.end());
-//         //msg.points.insert(msg.points.begin(); obstacleVector[index].vertices.back());
-//         ptrPub->publish(msg);
+// // Collison checking two rectangles OBB using the Separating Axis Theorem
+// double getDist(OBB a, OBB b){
+//     // http://blog.marcher.co/sat1/
+//     // https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
+//     //SWRI_PROFILE("intersects");
+//     // circle collision optimization
+//     Vector2D d(a.pos.x-b.pos.x, a.pos.y-b.pos.y); // change this operation
+//     float distSq = myDot(d,d);
+//     float r = max(a.w, a.h) + max(b.w, b.h);
+//     if (distSq > r*r){
+//         //cout<<"passed circle test! \n \n"<<endl;
+//         return false;
 //     }
+//     // SAT
+//     // Check for first OBB
+//     float axis[2];
+//     for(int i =0; i <= 3; i++){
+//         a.findMaxMin(a.normsX[i],a.normsY[i]);
+//         float aProj[2] {a.maxMin[0],a.maxMin[1]};
+//         b.findMaxMin(a.normsX[i],a.normsY[i]);
+//         float bProj[2] {b.maxMin[0],b.maxMin[1]};
+//         // Check is separating axis condition is true
+//         if(aProj[0] < bProj[1] || bProj[0] < aProj[1]){
+//             return false;
+//         }
+//     }
+//    for(int i =0; i <= 3; i++){
+//         a.findMaxMin(b.normsX[i],b.normsY[i]);
+//         float aProj[2] {a.maxMin[0],a.maxMin[1]};
+//         b.findMaxMin(b.normsX[i],b.normsY[i]);
+//         float bProj[2] {b.maxMin[0],b.maxMin[1]};
+//         // Check is separating axis condition is true
+//         if(aProj[0] < bProj[1] || bProj[0] < aProj[1]){
+//             return false;
+//         }
+//     }
+//     return true;
+// }
+// bool checkCollisionTra(const StateArray& T, const vector<car_msgs::Obstacle2D>& det, const vector<double>& carState){
+//     //return false; // Override collision check
+//     // Quickly check if trajectory exceeds the domain
+//     ROS_WARN_ONCE("TODO: In collision, implement domain check!");
+//     // for(int index = 0; index!=T.size(); index++){
+//     //     double xmax{25}, xmin{-25}, ymax{25}, ymin{-25};
+//     //     if(T[index][0]>xmax | T[index][0]<xmin | T[index][1]>ymax | T[index][1]<ymin){
+//     //         return true;
+//     //     }
+//     // }
+//     // Check if the trajectory2d obb separating axis theorem2d obb separating axis theorem collides with obstacles
+    
+//     for(int index = 0; index !=T.size(); index++){
+//         double t;
+//         if (obs_use_pred){
+//             t = T[index][6];
+//         }else{
+//             t = 0;
+//         }
+        
+//         // double t = 0;
+//         vector<OBB> obstacleVector = getOBBvector(det,t,carState);
+//         Vector2D vPos(T[index][0]+1.424*cos(T[index][2]),T[index][1]+1.424*sin(T[index][2]));
+//         ROS_WARN_STREAM_THROTTLE(5,"In CD: Check vehicle dimensions");
+//         OBB vOBB(vPos,2,4.848,T[index][2]); // Create vehicle OBB
+//         for(int j = 0; j !=obstacleVector.size(); j++){
+//             if (intersects(vOBB,obstacleVector[j])){
+//                 return true;
+//             }
+//         }
+//     }
+//     // No collisions
+//     return false;
 // }

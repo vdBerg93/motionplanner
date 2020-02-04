@@ -22,8 +22,8 @@ void updateReferenceResolution(double v){
 
 Controller::Controller(const MyReference& ref, const state_type& x){
     updateLookahead(x[4]);      // Update the lookahead distance (velocity dependent)
-    IDwp = 0; endreached = 0;   // Controller initialization
-    iE = 0;  // Longitudinal control configuration
+    IDwp = 0; endreached = 0;   // Lateral control initialization
+    iE = 0;                     // Longitudinal control error integral
     updateWaypoint(ref,x);      // Initialize the first waypoint
 }
 
@@ -32,12 +32,11 @@ ControlCommand Controller::getControls(const MyReference& ref, const Vehicle& ve
     ControlCommand C {getSteerCommand(ref, x, veh),getAccelerationCommand(veh, ref, x)};
     return C;
 }
+int LAlong = 2;
 
 double Controller::getAccelerationCommand(const Vehicle& veh, const MyReference& ref, const state_type& x){
-    int LAlong = 2;                         // Look additional x points in front of preview point (else velocity error could be zero)
-    int IDend = ref.v.size()-1;             // Index of last reference element
-    int ID = std::min(IDwp+LAlong,IDend);   // Make sure id does not exceed the vector length
-    double E = ref.v[ID]-x[4];              // Error
+    // int LAlong = 2;                         // Look additional x points in front of preview point (else velocity error could be zero)
+    double E = ref.v[IDwp+LAlong]-x[4];            // Error
     iE = iE + E*sim_dt;                     // Integral error
 
     // Calculate acceleration command and constrain it
@@ -46,9 +45,9 @@ double Controller::getAccelerationCommand(const Vehicle& veh, const MyReference&
 };
 
 double Controller::getSteerCommand(const MyReference& ref, const state_type& x, const Vehicle& veh){
-    ym = getLateralError(ref,x,IDwp,Ppreview);                      // Get the lateral error at preview point, perpendicular to vehicle 
+    ym = getLateralError(ref,x,IDwp,Ppreview);                          // Get the lateral error at preview point, perpendicular to vehicle 
     double cmdDelta = 2*((veh.L+veh.Kus*x[4]*x[4])/pow(ctrl_dla,2))*ym; // Single preview point control (Schmeitz, 2017, "Towards a Generic Lateral Control Concept ...")
-    return checkSaturation(-veh.dmax,veh.dmax,cmdDelta);;           // Constrain with actuator saturation limits
+    return checkSaturation(-veh.dmax,veh.dmax,cmdDelta);;               // Constrain with actuator saturation limits
 };
 
 void Controller::updateWaypoint(const MyReference& ref, const state_type& x){
@@ -60,9 +59,12 @@ void Controller::updateWaypoint(const MyReference& ref, const state_type& x){
     IDwp = findClosestPoint(ref, Ppreview, IDwp);
 
     // if (IDwp>=(ref.x.size()-2)){
-    if (IDwp>=ref.x.size()-1){
+    if (IDwp>=ref.x.size()-1-LAlong){
         endreached = 1;
     };
+    if ((ref.x[IDwp]==ref.x.back())&&(ref.y[IDwp]==ref.y.back())){
+        endreached = 1;
+    }
 };
 
 double getLateralError(const MyReference &ref, const state_type &x, const int& IDwp,const geometry_msgs::Point& Ppreview){

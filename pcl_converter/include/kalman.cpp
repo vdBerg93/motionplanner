@@ -29,7 +29,7 @@ KalmanFilter::KalmanFilter() {
   int n = 4; // Number of states
   int m = 2; // Number of measurements
 
-  double dt = 0.05; // Time step
+  double dt = double(1)/double(30); // Time step
   // Define system matrices
   Eigen::MatrixXd Ain(n, n); // System dynamics matrix
   Eigen::MatrixXd Cin(m, n); // Output matrix
@@ -58,12 +58,14 @@ KalmanFilter::KalmanFilter() {
   I.setIdentity();
 
     // Show matrices
-  std::cout << "A: \n" << A << std::endl;
-  std::cout << "C: \n" << C << std::endl;
-  std::cout << "Q: \n" << Q << std::endl;
-  std::cout << "R: \n" << R << std::endl;
-  std::cout << "P0: \n" << P0 << std::endl;
-  std::cout<< "I: \n" << I << std::endl;
+  if (DEBUG){
+    std::cout << "A: \n" << A << std::endl;
+    std::cout << "C: \n" << C << std::endl;
+    std::cout << "Q: \n" << Q << std::endl;
+    std::cout << "R: \n" << R << std::endl;
+    std::cout << "P0: \n" << P0 << std::endl;
+    std::cout<< "I: \n" << I << std::endl;
+  }
 }
 
 void KalmanFilter::init(double t0, const Eigen::VectorXd& x0) {

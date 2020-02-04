@@ -19,11 +19,13 @@ add_message_files(
   MotionResponse.msg
   MotionPlan.msg
   LaneDet.msg
+  ControlErrors.msg
 )
 
 add_service_files(
   FILES
   getobstacles.srv
+  resetplanner.srv
 )
 
 generate_messages(
